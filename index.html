@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>📦 Sistem Manajemen Stok</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- HEADER -->
+  <header class="bg-blue-700 text-white p-4 text-center shadow-lg">
+    <h1 class="text-2xl font-bold">📦 Sistem Manajemen Stok Gudang</h1>
+  </header>
+
+  <main class="p-6 max-w-6xl mx-auto space-y-6">
+
+    <!-- DASHBOARD -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-green-200 p-6 rounded-2xl shadow text-center">
+        <h2 class="text-lg font-semibold">Stok Tersedia</h2>
+        <p id="stok-tersedia" class="text-2xl font-bold text-green-700">0</p>
+      </div>
+      <div class="bg-red-200 p-6 rounded-2xl shadow text-center">
+        <h2 class="text-lg font-semibold">Stok Habis</h2>
+        <p id="stok-habis" class="text-2xl font-bold text-red-700">0</p>
+      </div>
+      <div class="bg-blue-200 p-6 rounded-2xl shadow text-center">
+        <h2 class="text-lg font-semibold">Total Store</h2>
+        <p id="total-store" class="text-2xl font-bold text-blue-700">0</p>
+      </div>
+      <div class="bg-yellow-200 p-6 rounded-2xl shadow text-center">
+        <h2 class="text-lg font-semibold">Transaksi</h2>
+        <p id="total-transaksi" class="text-2xl font-bold text-yellow-700">0</p>
+      </div>
+    </div>
+
+    <!-- FORM MASUK BARANG -->
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-4">Form Masuk Barang</h2>
+      <form id="form-masuk" class="grid md:grid-cols-3 gap-4">
+        <input type="text" id="kode-masuk" placeholder="Kode Barang" required class="border p-2 rounded">
+        <input type="text" id="nama-masuk" placeholder="Nama Barang" required class="border p-2 rounded">
+        <input type="number" id="qty-masuk" placeholder="Qty" required class="border p-2 rounded">
+        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 col-span-3">Tambah Barang</button>
+      </form>
+    </div>
+
+    <!-- FORM KELUAR BARANG -->
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-4">Form Keluar Barang</h2>
+      <form id="form-keluar" class="grid md:grid-cols-4 gap-4">
+        <select id="store-keluar" required class="border p-2 rounded"></select>
+        <input type="text" id="kode-keluar" placeholder="Kode Barang" required class="border p-2 rounded">
+        <input type="number" id="qty-keluar" placeholder="Qty" required class="border p-2 rounded">
+        <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Ambil Barang</button>
+      </form>
+    </div>
+
+    <!-- PENGATURAN STORE -->
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="text-xl font-semibold mb-4">Pengaturan Store</h2>
+      <form id="form-store" class="grid md:grid-cols-3 gap-4 mb-4">
+        <input type="text" id="nomor-store" placeholder="Nomor Store" required class="border p-2 rounded">
+        <input type="text" id="nama-store" placeholder="Nama Store" required class="border p-2 rounded">
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Tambah Store</button>
+      </form>
+      <ul id="daftar-store" class="list-disc pl-5"></ul>
+    </div>
+
+    <!-- TABEL BARANG -->
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <div class="flex justify-between mb-4">
+        <h2 class="text-xl font-semibold">Daftar Barang</h2>
+        <div class="flex gap-2">
+          <input type="text" id="cari" placeholder="Cari kode/nama" class="border p-2 rounded">
+          <button onclick="downloadExcel()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">⬇️ Excel</button>
+        </div>
+      </div>
+      <table class="w-full border text-center">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border p-2">Kode</th>
+            <th class="border p-2">Nama Barang</th>
+            <th class="border p-2">Stok</th>
+            <th class="border p-2">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-barang"></tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <script>
+    let barang = [];
+    let store = [];
+    let transaksi = 0;
+
+    // ===== FORM MASUK =====
+    document.getElementById("form-masuk").addEventListener("submit", e => {
+      e.preventDefault();
+      const kode = document.getElementById("kode-masuk").value;
+      const nama = document.getElementById("nama-masuk").value;
+      const qty = parseInt(document.getElementById("qty-masuk").value);
+
+      const existing = barang.find(b => b.kode === kode);
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        barang.push({ kode, nama, qty });
+      }
+      transaksi++;
+      render();
+      e.target.reset();
+    });
+
+    // ===== FORM KELUAR =====
+    document.getElementById("form-keluar").addEventListener("submit", e => {
+      e.preventDefault();
+      const kode = document.getElementById("kode-keluar").value;
+      const qty = parseInt(document.getElementById("qty-keluar").value);
+      const storeId = document.getElementById("store-keluar").value;
+
+      const item = barang.find(b => b.kode === kode);
+      if (!item || item.qty < qty) {
+        alert("Stok tidak cukup atau barang tidak ada!");
+        return;
+      }
+      item.qty -= qty;
+      transaksi++;
+      render();
+      e.target.reset();
+    });
+
+    // ===== FORM STORE =====
+    document.getElementById("form-store").addEventListener("submit", e => {
+      e.preventDefault();
+      const nomor = document.getElementById("nomor-store").value;
+      const nama = document.getElementById("nama-store").value;
+      store.push({ nomor, nama });
+      renderStore();
+      e.target.reset();
+    });
+
+    function renderStore() {
+      const daftar = document.getElementById("daftar-store");
+      const select = document.getElementById("store-keluar");
+      daftar.innerHTML = "";
+      select.innerHTML = "<option value='' disabled selected>Pilih Store</option>";
+      store.forEach(s => {
+        daftar.innerHTML += `<li>${s.nomor} - ${s.nama}</li>`;
+        select.innerHTML += `<option value="${s.nomor}">${s.nomor} - ${s.nama}</option>`;
+      });
+      document.getElementById("total-store").innerText = store.length;
+    }
+
+    // ===== RENDER TABEL BARANG =====
+    function render() {
+      const tbody = document.getElementById("tabel-barang");
+      const cari = document.getElementById("cari").value.toLowerCase();
+      tbody.innerHTML = "";
+
+      let tersedia = 0, habis = 0;
+
+      barang.filter(b => 
+        b.kode.toLowerCase().includes(cari) || 
+        b.nama.toLowerCase().includes(cari)
+      ).forEach(item => {
+        if (item.qty > 0) tersedia += item.qty; else habis++;
+        tbody.innerHTML += `
+          <tr>
+            <td class="border p-2">${item.kode}</td>
+            <td class="border p-2">${item.nama}</td>
+            <td class="border p-2">${item.qty}</td>
+            <td class="border p-2 ${item.qty > 0 ? 'text-green-600' : 'text-red-600'}">
+              ${item.qty > 0 ? "Tersedia" : "Habis"}
+            </td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("stok-tersedia").innerText = tersedia;
+      document.getElementById("stok-habis").innerText = habis;
+      document.getElementById("total-transaksi").innerText = transaksi;
+    }
+
+    // Pencarian realtime
+    document.getElementById("cari").addEventListener("input", render);
+
+    // ===== DOWNLOAD EXCEL =====
+    function downloadExcel() {
+      const ws = XLSX.utils.json_to_sheet(barang);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Stok Barang");
+      XLSX.writeFile(wb, "stok_barang.xlsx");
+    }
+  </script>
+</body>
+</html>
