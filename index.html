@@ -8,6 +8,12 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    /* Simple page transitions */
+    .page { transition: opacity 0.35s ease, transform 0.35s ease; }
+    .page.hidden { opacity: 0; transform: translateY(12px); display: none; }
+    .page:not(.hidden) { opacity: 1; transform: translateY(0); display: block; }
+  </style>
 </head>
 <body class="bg-gray-100 flex min-h-screen transition-colors duration-500">
 
@@ -179,7 +185,12 @@
     // Barang masuk
     document.getElementById("form-masuk").addEventListener("submit", e => {
       e.preventDefault();
-      const kode = kode.value, nama = nama.value, qty = parseInt(qty.value), tanggal = tgl-masuk.value;
+      const kode = document.getElementById("kode").value.trim();
+      const nama = document.getElementById("nama").value.trim();
+      const qtyVal = document.getElementById("qty").value;
+      const qty = qtyVal === "" ? 0 : parseInt(qtyVal, 10);
+      const tanggal = document.getElementById("tgl-masuk").value;
+      if(!kode||!nama||!tanggal) return alert('Lengkapi data');
       barang.push({ kode, nama, qty, tanggal });
       renderBarang(); updateChart();
       e.target.reset();
@@ -199,24 +210,34 @@
               <td class="border p-2">${item.qty}</td>
               <td class="border p-2">${item.tanggal}</td>
               <td class="border p-2">
+                <button onclick="editBarang(${i})" class="text-blue-600 mr-2">Edit</button>
                 <button onclick="hapusBarang(${i})" class="text-red-600">Hapus</button>
               </td>
             </tr>`;
         });
       updateChart();
     }
-    function hapusBarang(i){ barang.splice(i,1); renderBarang(); }
+    function hapusBarang(i){ if(!confirm('Hapus barang?'))return; barang.splice(i,1); renderBarang(); }
+    function editBarang(i){
+      const it = barang[i];
+      const kode = prompt('Kode', it.kode); if(kode===null) return;
+      const nama = prompt('Nama', it.nama); if(nama===null) return;
+      const qtyVal = prompt('Qty', it.qty); if(qtyVal===null) return; const qty = parseInt(qtyVal,10);
+      const tanggal = prompt('Tanggal (YYYY-MM-DD)', it.tanggal); if(tanggal===null) return;
+      it.kode = kode; it.nama = nama; it.qty = qty; it.tanggal = tanggal; renderBarang();
+    }
 
     // Barang keluar
     document.getElementById("form-keluar").addEventListener("submit", e => {
       e.preventDefault();
-      const kode = document.getElementById("kode-keluar").value;
-      const qty = parseInt(document.getElementById("qty-keluar").value);
+      const kode = document.getElementById("kode-keluar").value.trim();
+      const qtyVal = document.getElementById("qty-keluar").value;
+      const qty = qtyVal === "" ? 0 : parseInt(qtyVal,10);
       const storeNama = document.getElementById("store-keluar").value;
       const tanggal = document.getElementById("tgl-keluar").value;
-
       const item = barang.find(b => b.kode === kode);
-      if (!item || item.qty < qty) return alert("Stok tidak cukup!");
+      if (!item) return alert("Barang tidak ditemukan!");
+      if (item.qty < qty) return alert("Stok tidak cukup!");
       item.qty -= qty;
       transaksi.push({ tanggal, kode: item.kode, nama: item.nama, qty, jenis: "Keluar", store: storeNama });
       renderBarang(); renderTransaksi(); updateReportChart();
@@ -241,8 +262,9 @@
     // Store
     document.getElementById("form-store").addEventListener("submit", e => {
       e.preventDefault();
-      const nomor = document.getElementById("nomor-store").value;
-      const nama = document.getElementById("nama-store").value;
+      const nomor = document.getElementById("nomor-store").value.trim();
+      const nama = document.getElementById("nama-store").value.trim();
+      if(!nomor||!nama) return alert('Lengkapi data');
       store.push({ nomor, nama });
       renderStore();
       e.target.reset();
@@ -251,33 +273,30 @@
       const ul = document.getElementById("daftar-store");
       const select = document.getElementById("store-keluar");
       ul.innerHTML = ""; select.innerHTML = "<option disabled selected>Pilih Store</option>";
-      store.forEach(s => {
-        ul.innerHTML += `<li>${s.nomor} - ${s.nama}</li>`;
-        select.innerHTML += `<option>${s.nomor} - ${s.nama}</option>`;
-      });
+      store.forEach(s => { ul.innerHTML += `<li>${s.nomor} - ${s.nama}</li>`; select.innerHTML += `<option>${s.nomor} - ${s.nama}</option>`; });
       document.getElementById("total-store").innerText = store.length;
     }
 
     // Chart dashboard
     function updateChart() {
       const ctx = document.getElementById("stokChart").getContext("2d");
-      const total = barang.reduce((a,b) => a+b.qty, 0);
-      const hampir = barang.filter(b => b.qty < 10 && b.qty > 0).length;
-      const habis = barang.filter(b => b.qty === 0).length;
+      const total = barang.reduce((a,b) => a + Number(b.qty||0), 0);
+      const hampir = barang.filter(b => Number(b.qty) > 0 && Number(b.qty) < 10).length;
+      const habis = barang.filter(b => Number(b.qty) === 0).length;
       document.getElementById("stok-tersedia").innerText = total;
       document.getElementById("stok-hampir").innerText = hampir;
       document.getElementById("stok-habis").innerText = habis;
       if(stokChart) stokChart.destroy();
-      stokChart = new Chart(ctx,{type:"pie",data:{labels:["Tersedia","Hampir Habis","Habis"],datasets:[{data:[total,hampir,habis],backgroundColor:["#22c55e","#eab308","#ef4444"]}]}})
+      stokChart = new Chart(ctx,{type:"pie",data:{labels:["Tersedia","Hampir Habis","Habis"],datasets:[{data:[total,hampir,habis],backgroundColor:["#22c55e","#f59e0b","#ef4444"]}]},options:{responsive:true}});
     }
 
     // Chart laporan transaksi
     function updateReportChart() {
       const ctx = document.getElementById("laporanChart").getContext("2d");
-      const masuk = barang.reduce((a,b)=>a+b.qty,0);
-      const keluar = transaksi.reduce((a,t)=>a+t.qty,0);
+      const masuk = barang.reduce((a,b)=>a+Number(b.qty||0),0);
+      const keluar = transaksi.reduce((a,t)=>a+Number(t.qty||0),0);
       if(laporanChart) laporanChart.destroy();
-      laporanChart = new Chart(ctx,{type:"bar",data:{labels:["Masuk","Keluar"],datasets:[{label:"Jumlah",data:[masuk,keluar],backgroundColor:["#22c55e","#ef4444"]}]}})
+      laporanChart = new Chart(ctx,{type:"bar",data:{labels:["Masuk","Keluar"],datasets:[{label:"Jumlah",data:[masuk,keluar],backgroundColor:["#22c55e","#ef4444"]}]},options:{responsive:true}});
     }
 
     // Export Excel
@@ -288,7 +307,7 @@
       XLSX.writeFile(wb,"stok.xlsx");
     }
 
-    // Export PDF
+    // Export PDF (simple)
     async function downloadPDF(){
       const {jsPDF} = window.jspdf;
       const doc = new jsPDF();
@@ -304,7 +323,15 @@
     function openUserModal(){ document.getElementById("user-modal").classList.remove("hidden"); }
     function closeUserModal(){ document.getElementById("user-modal").classList.add("hidden"); }
 
-    // Setting
+    // Settings
     function toggleTheme(){ document.body.classList.toggle("bg-gray-900"); document.body.classList.toggle("text-white"); }
     function changeFont(){ document.body.style.fontFamily = document.body.style.fontFamily==="serif"?"sans-serif":"serif"; }
-    function changeColor(){ document.querySelector("
+    function changeColor(){ const aside = document.querySelector("aside"); aside.classList.toggle("bg-blue-700"); aside.classList.toggle("bg-purple-700"); }
+    function backupData(){ const data = {barang,store,transaksi}; const blob = new Blob([JSON.stringify(data)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='backup_wms.json'; a.click(); URL.revokeObjectURL(url); }
+    function refreshPage(){ location.reload(); }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', ()=>{ showPage('dashboard'); updateChart(); });
+  </script>
+</body>
+</html>
