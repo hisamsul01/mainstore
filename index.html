@@ -1,538 +1,251 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📦 WMS Interaktif – Mutasi & Laporan PDF</title>
-  <!-- Tailwind -->
+  <meta charset="UTF-8">
+  <title>📦 Sistem Manajemen Stok</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-  <!-- SheetJS (Excel) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- jsPDF & autoTable (PDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <style>
-    html { scroll-behavior: smooth; }
-    .menu-active { @apply bg-blue-600 text-white; }
+    /* Animasi transisi */
+    .fade-enter { opacity: 0; transform: translateY(20px); }
+    .fade-enter-active { opacity: 1; transform: translateY(0); transition: all 0.5s ease-in-out; }
+    .fade-exit { opacity: 1; transform: translateY(0); }
+    .fade-exit-active { opacity: 0; transform: translateY(-20px); transition: all 0.5s ease-in-out; }
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
-  <!-- Topbar -->
-  <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-      <div class="text-2xl">📦</div>
-      <h1 class="text-xl font-bold">Warehouse Management System</h1>
-      <div class="ml-auto flex items-center gap-2 text-sm">
-        <span class="hidden md:inline text-slate-500">Profesional • Interaktif • PDF/Excel</span>
-      </div>
-    </div>
-  </header>
+<body class="bg-gray-100 flex min-h-screen">
 
-  <!-- App Shell -->
-  <div class="max-w-7xl mx-auto px-4 py-6 grid md:grid-cols-12 gap-6">
-    <!-- Sidebar Menu -->
-    <aside class="md:col-span-3 lg:col-span-2">
-      <nav class="space-y-2">
-        <button data-target="dashboard" class="w-full px-4 py-2 rounded-xl border hover:bg-slate-100 flex items-center gap-2"><i class="ti ti-home"></i> Dashboard</button>
-        <button data-target="items" class="w-full px-4 py-2 rounded-xl border hover:bg-slate-100 flex items-center gap-2"><i class="ti ti-box"></i> Barang</button>
-        <button data-target="transactions" class="w-full px-4 py-2 rounded-xl border hover:bg-slate-100 flex items-center gap-2"><i class="ti ti-arrows-right-left"></i> Transaksi</button>
-        <button data-target="stores" class="w-full px-4 py-2 rounded-xl border hover:bg-slate-100 flex items-center gap-2"><i class="ti ti-building-store"></i> Store</button>
-        <button data-target="reports" class="w-full px-4 py-2 rounded-xl border hover:bg-slate-100 flex items-center gap-2"><i class="ti ti-file-type-pdf"></i> Laporan</button>
-        <button id="btn-export-excel" class="w-full px-4 py-2 rounded-xl border hover:bg-slate-100 flex items-center gap-2"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
-        <button id="btn-reset" class="w-full px-4 py-2 rounded-xl border bg-rose-50 text-rose-700 hover:bg-rose-100 flex items-center gap-2"><i class="ti ti-trash"></i> Reset Data</button>
-      </nav>
-    </aside>
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-700 text-white p-6 flex flex-col space-y-4">
+    <h1 class="text-2xl font-bold mb-6">📦 StokApp</h1>
+    <button onclick="showPage('dashboard')" class="hover:bg-blue-600 p-2 rounded">Dashboard</button>
+    <button onclick="showPage('barang')" class="hover:bg-blue-600 p-2 rounded">Barang</button>
+    <button onclick="showPage('transaksi')" class="hover:bg-blue-600 p-2 rounded">Transaksi</button>
+    <button onclick="showPage('store')" class="hover:bg-blue-600 p-2 rounded">Store</button>
+    <button onclick="showPage('laporan')" class="hover:bg-blue-600 p-2 rounded">Laporan</button>
+  </aside>
 
-    <!-- Content -->
-    <section class="md:col-span-9 lg:col-span-10 space-y-6">
+  <!-- Main Content -->
+  <main class="flex-1 p-6" id="main-content">
 
-      <!-- DASHBOARD -->
-      <div id="dashboard" class="card">
-        <div class="bg-white rounded-2xl border shadow-sm">
-          <div class="p-5 border-b">
-            <h2 class="text-lg font-semibold">Dashboard</h2>
-            <p class="text-sm text-slate-500">Ringkasan stok dan jumlah store</p>
-          </div>
-          <div class="p-5 grid md:grid-cols-4 gap-4">
-            <div class="rounded-xl p-4 bg-emerald-50 border">
-              <div class="text-slate-500 text-sm">Barang Tersedia</div>
-              <div id="stat-tersedia" class="text-3xl font-bold">0</div>
-            </div>
-            <div class="rounded-xl p-4 bg-amber-50 border">
-              <div class="text-slate-500 text-sm">Barang Hampir Habis</div>
-              <div id="stat-hampir" class="text-3xl font-bold">0</div>
-            </div>
-            <div class="rounded-xl p-4 bg-rose-50 border">
-              <div class="text-slate-500 text-sm">Barang Habis</div>
-              <div id="stat-habis" class="text-3xl font-bold">0</div>
-            </div>
-            <div class="rounded-xl p-4 bg-blue-50 border">
-              <div class="text-slate-500 text-sm">Jumlah Store</div>
-              <div id="stat-store" class="text-3xl font-bold">0</div>
-            </div>
-          </div>
-          <div class="px-5 pb-5 text-sm text-slate-500">Tip: set <b>Min Stock</b> pada barang agar peringatan "hampir habis" akurat.</div>
+    <!-- Dashboard -->
+    <section id="dashboard" class="page">
+      <h2 class="text-2xl font-bold mb-6">📊 Dashboard</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="p-6 bg-gradient-to-r from-green-400 to-green-600 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+          <h3 class="text-lg font-semibold">Barang Tersedia</h3>
+          <p id="stok-tersedia" class="text-3xl font-bold mt-2">0</p>
+        </div>
+        <div class="p-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+          <h3 class="text-lg font-semibold">Hampir Habis</h3>
+          <p id="stok-hampir" class="text-3xl font-bold mt-2">0</p>
+        </div>
+        <div class="p-6 bg-gradient-to-r from-red-500 to-pink-600 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+          <h3 class="text-lg font-semibold">Stok Habis</h3>
+          <p id="stok-habis" class="text-3xl font-bold mt-2">0</p>
+        </div>
+        <div class="p-6 bg-gradient-to-r from-blue-400 to-indigo-600 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+          <h3 class="text-lg font-semibold">Jumlah Store</h3>
+          <p id="total-store" class="text-3xl font-bold mt-2">0</p>
         </div>
       </div>
-
-      <!-- ITEMS -->
-      <div id="items" class="hidden">
-        <div class="bg-white rounded-2xl border shadow-sm">
-          <div class="p-5 border-b flex items-center gap-3">
-            <div>
-              <h2 class="text-lg font-semibold">Barang</h2>
-              <p class="text-sm text-slate-500">Kelola barang, edit/hapus, & pencarian</p>
-            </div>
-            <div class="ml-auto flex items-center gap-2">
-              <input id="search-item" type="text" placeholder="Cari kode/nama..." class="border rounded-lg px-3 py-2 w-56">
-              <button id="btn-add-demo" class="px-3 py-2 border rounded-lg hover:bg-slate-100">+ Contoh Data</button>
-            </div>
-          </div>
-
-          <!-- Form Masuk Barang -->
-          <form id="form-masuk" class="p-5 grid md:grid-cols-5 gap-3 border-b">
-            <input id="kode-masuk" required class="border rounded-lg px-3 py-2" placeholder="Kode Barang">
-            <input id="nama-masuk" required class="border rounded-lg px-3 py-2" placeholder="Nama Barang">
-            <input id="qty-masuk" type="number" min="0" required class="border rounded-lg px-3 py-2" placeholder="Qty Masuk">
-            <input id="min-masuk" type="number" min="0" class="border rounded-lg px-3 py-2" placeholder="Min Stock (opsi)">
-            <input id="tgl-masuk" type="date" class="border rounded-lg px-3 py-2" />
-            <button class="md:col-span-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2">Simpan Masuk</button>
-          </form>
-
-          <!-- Tabel Barang -->
-          <div class="p-5 overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="bg-slate-100 text-left">
-                  <th class="p-2 border">Kode</th>
-                  <th class="p-2 border">Nama</th>
-                  <th class="p-2 border">Qty</th>
-                  <th class="p-2 border">Min</th>
-                  <th class="p-2 border">Status</th>
-                  <th class="p-2 border">Tgl Masuk</th>
-                  <th class="p-2 border text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-items"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- TRANSACTIONS -->
-      <div id="transactions" class="hidden">
-        <div class="bg-white rounded-2xl border shadow-sm">
-          <div class="p-5 border-b">
-            <h2 class="text-lg font-semibold">Transaksi & Mutasi</h2>
-            <p class="text-sm text-slate-500">Form keluar barang (ke store) & log mutasi</p>
-          </div>
-
-          <!-- Form Keluar Barang -->
-          <form id="form-keluar" class="p-5 grid md:grid-cols-5 gap-3 border-b">
-            <select id="store-keluar" required class="border rounded-lg px-3 py-2"></select>
-            <input id="kode-keluar" required class="border rounded-lg px-3 py-2" placeholder="Kode Barang">
-            <input id="qty-keluar" type="number" min="1" required class="border rounded-lg px-3 py-2" placeholder="Qty Keluar">
-            <input id="tgl-keluar" type="date" class="border rounded-lg px-3 py-2" />
-            <button class="bg-rose-600 hover:bg-rose-700 text-white rounded-lg px-4 py-2">Simpan Keluar</button>
-          </form>
-
-          <!-- Mutasi Table -->
-          <div class="p-5 overflow-x-auto">
-            <div class="flex items-center gap-3 mb-3">
-              <input id="filter-mutasi" type="text" class="border rounded-lg px-3 py-2" placeholder="Cari kode/nama/store...">
-              <input id="mutasi-from" type="date" class="border rounded-lg px-3 py-2" />
-              <input id="mutasi-to" type="date" class="border rounded-lg px-3 py-2" />
-              <button id="btn-clear-mutasi" class="px-3 py-2 border rounded-lg hover:bg-slate-100">Bersihkan Filter</button>
-            </div>
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="bg-slate-100 text-left">
-                  <th class="p-2 border">Tanggal</th>
-                  <th class="p-2 border">Tipe</th>
-                  <th class="p-2 border">Kode</th>
-                  <th class="p-2 border">Nama</th>
-                  <th class="p-2 border">Qty</th>
-                  <th class="p-2 border">Store</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-mutasi"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- STORES -->
-      <div id="stores" class="hidden">
-        <div class="bg-white rounded-2xl border shadow-sm">
-          <div class="p-5 border-b">
-            <h2 class="text-lg font-semibold">Pengaturan Store</h2>
-            <p class="text-sm text-slate-500">Tambah store (nomor & nama)</p>
-          </div>
-          <form id="form-store" class="p-5 grid md:grid-cols-3 gap-3 border-b">
-            <input id="store-no" required class="border rounded-lg px-3 py-2" placeholder="Nomor Store">
-            <input id="store-name" required class="border rounded-lg px-3 py-2" placeholder="Nama Store">
-            <button class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2">Tambah Store</button>
-          </form>
-          <div class="p-5 overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="bg-slate-100 text-left">
-                  <th class="p-2 border">No</th>
-                  <th class="p-2 border">Nama</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-stores"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- REPORTS -->
-      <div id="reports" class="hidden">
-        <div class="bg-white rounded-2xl border shadow-sm">
-          <div class="p-5 border-b">
-            <h2 class="text-lg font-semibold">Laporan (PDF)</h2>
-            <p class="text-sm text-slate-500">Transaksi Masuk, Keluar, dan Stok Tersedia</p>
-          </div>
-          <div class="p-5 space-y-4">
-            <div class="grid md:grid-cols-4 gap-3">
-              <select id="laporan-jenis" class="border rounded-lg px-3 py-2">
-                <option value="tersedia">Stok Tersedia</option>
-                <option value="masuk">Transaksi Masuk</option>
-                <option value="keluar">Transaksi Keluar</option>
-              </select>
-              <input id="laporan-from" type="date" class="border rounded-lg px-3 py-2" />
-              <input id="laporan-to" type="date" class="border rounded-lg px-3 py-2" />
-              <button id="btn-export-pdf" class="bg-slate-800 hover:bg-black text-white rounded-lg px-4 py-2 flex items-center gap-2"><i class="ti ti-file-type-pdf"></i> Export PDF</button>
-            </div>
-            <div class="text-xs text-slate-500">Rentang tanggal hanya berlaku untuk laporan <b>masuk</b> & <b>keluar</b>.</div>
-          </div>
-        </div>
-      </div>
-
     </section>
-  </div>
+
+    <!-- Barang -->
+    <section id="barang" class="page hidden">
+      <h2 class="text-2xl font-bold mb-6">📦 Barang</h2>
+      <form id="form-masuk" class="grid md:grid-cols-4 gap-4 mb-4">
+        <input type="text" id="kode" placeholder="Kode Barang" required class="border p-2 rounded">
+        <input type="text" id="nama" placeholder="Nama Barang" required class="border p-2 rounded">
+        <input type="number" id="qty" placeholder="Qty" required class="border p-2 rounded">
+        <button class="bg-green-600 text-white px-4 py-2 rounded">Tambah</button>
+      </form>
+      <input type="text" id="cari" placeholder="Cari barang..." class="border p-2 rounded mb-4">
+      <table class="w-full border text-center bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border p-2">Kode</th>
+            <th class="border p-2">Nama</th>
+            <th class="border p-2">Qty</th>
+            <th class="border p-2">Tanggal Masuk</th>
+            <th class="border p-2">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-barang"></tbody>
+      </table>
+    </section>
+
+    <!-- Transaksi -->
+    <section id="transaksi" class="page hidden">
+      <h2 class="text-2xl font-bold mb-6">📑 Transaksi</h2>
+      <form id="form-keluar" class="grid md:grid-cols-4 gap-4 mb-4">
+        <select id="store-keluar" required class="border p-2 rounded"></select>
+        <input type="text" id="kode-keluar" placeholder="Kode Barang" required class="border p-2 rounded">
+        <input type="number" id="qty-keluar" placeholder="Qty" required class="border p-2 rounded">
+        <button class="bg-red-600 text-white px-4 py-2 rounded">Ambil</button>
+      </form>
+      <h3 class="text-xl font-semibold mt-6 mb-2">Mutasi Stok</h3>
+      <table class="w-full border text-center bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border p-2">Tanggal</th>
+            <th class="border p-2">Kode</th>
+            <th class="border p-2">Nama</th>
+            <th class="border p-2">Qty</th>
+            <th class="border p-2">Jenis</th>
+            <th class="border p-2">Store</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-transaksi"></tbody>
+      </table>
+    </section>
+
+    <!-- Store -->
+    <section id="store" class="page hidden">
+      <h2 class="text-2xl font-bold mb-6">🏬 Store</h2>
+      <form id="form-store" class="grid md:grid-cols-3 gap-4 mb-4">
+        <input type="text" id="nomor-store" placeholder="Nomor Store" required class="border p-2 rounded">
+        <input type="text" id="nama-store" placeholder="Nama Store" required class="border p-2 rounded">
+        <button class="bg-blue-600 text-white px-4 py-2 rounded">Tambah Store</button>
+      </form>
+      <ul id="daftar-store" class="list-disc pl-5"></ul>
+    </section>
+
+    <!-- Laporan -->
+    <section id="laporan" class="page hidden">
+      <h2 class="text-2xl font-bold mb-6">📄 Laporan</h2>
+      <div class="flex gap-4">
+        <button onclick="downloadExcel()" class="bg-green-600 text-white px-4 py-2 rounded">⬇️ Excel</button>
+        <button onclick="downloadPDF()" class="bg-red-600 text-white px-4 py-2 rounded">⬇️ PDF</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Musik Latar -->
+  <audio autoplay loop>
+    <source src="musik.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
-    // ====== STATE ======
-    const state = {
-      items: [], // {code,name,qty,min,createdAt}
-      stores: [], // {no,name}
-      mutations: [] // {date,type:'MASUK'|'KELUAR', code,name,qty, storeNo?, storeName?}
-    };
+    let barang = [], store = [], transaksi = [];
 
-    // Persistence (localStorage)
-    const KEY = 'wms_state_v1';
-    function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
-    function load() {
-      const raw = localStorage.getItem(KEY);
-      if (!raw) return;
-      try {
-        const s = JSON.parse(raw);
-        state.items = s.items || [];
-        state.stores = s.stores || [];
-        state.mutations = s.mutations || [];
-      } catch {}
+    // Navigasi antar menu
+    function showPage(id) {
+      document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
     }
 
-    // ====== HELPERS ======
-    const $$ = (sel, root=document) => root.querySelector(sel);
-    const $$$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-    const today = () => new Date().toISOString().slice(0,10);
-    const pad = n => String(n).padStart(2,'0');
+    // Tambah barang
+    document.getElementById("form-masuk").addEventListener("submit", e => {
+      e.preventDefault();
+      const kode = document.getElementById("kode").value;
+      const nama = document.getElementById("nama").value;
+      const qty = parseInt(document.getElementById("qty").value);
+      const tanggal = new Date().toLocaleDateString();
 
-    function fmtDate(d){ if(!d) return ''; return new Date(d+'T00:00:00'); }
+      barang.push({ kode, nama, qty, tanggal });
+      renderBarang();
+      e.target.reset();
+    });
 
-    function statusOf(item){
-      if(item.qty <= 0) return {label:'Habis', cls:'text-rose-700'};
-      if(item.min != null && item.min !== '' && Number(item.qty) <= Number(item.min)) return {label:'Hampir Habis', cls:'text-amber-700'};
-      return {label:'Tersedia', cls:'text-emerald-700'};
-    }
-
-    function recomputeStats(){
-      let tersedia=0, hampir=0, habis=0;
-      state.items.forEach(it=>{
-        const st = statusOf(it).label;
-        if(st==='Habis') habis++;
-        else if(st==='Hampir Habis') hampir++;
-        if(it.qty>0) tersedia += Number(it.qty);
-      });
-      $('#stat-tersedia').textContent = tersedia;
-      $('#stat-hampir').textContent = hampir;
-      $('#stat-habis').textContent = habis;
-      $('#stat-store').textContent = state.stores.length;
-    }
-
-    function $(id){return document.getElementById(id.replace('#',''))}
-
-    // ====== RENDERERS ======
-    function renderItems(){
-      const tbody = $('#tbody-items');
-      const q = $('#search-item').value.trim().toLowerCase();
-      tbody.innerHTML = '';
-      state.items
-        .filter(it => it.code.toLowerCase().includes(q) || it.name.toLowerCase().includes(q))
-        .sort((a,b)=>a.code.localeCompare(b.code))
-        .forEach((it, idx)=>{
-          const st = statusOf(it);
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="p-2 border">${it.code}</td>
-            <td class="p-2 border">${it.name}</td>
-            <td class="p-2 border">${it.qty}</td>
-            <td class="p-2 border">${it.min ?? ''}</td>
-            <td class="p-2 border ${st.cls}">${st.label}</td>
-            <td class="p-2 border">${it.createdAt || ''}</td>
-            <td class="p-2 border text-center">
-              <button class="px-2 py-1 border rounded hover:bg-slate-100 mr-1" data-edit="${it.code}"><i class="ti ti-edit"></i></button>
-              <button class="px-2 py-1 border rounded hover:bg-rose-50 text-rose-700" data-del="${it.code}"><i class="ti ti-trash"></i></button>
-            </td>`;
-          tbody.appendChild(tr);
-        });
-
-      // bind actions
-      $$$('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>openEditItem(btn.getAttribute('data-edit'))));
-      $$$('[data-del]').forEach(btn=>btn.addEventListener('click',()=>deleteItem(btn.getAttribute('data-del'))));
-      recomputeStats();
-    }
-
-    function renderStores(){
-      const tbody = $('#tbody-stores');
-      const sel = $('#store-keluar');
-      tbody.innerHTML = '';
-      sel.innerHTML = '<option value="" disabled selected>Pilih Store</option>';
-      state.stores.sort((a,b)=>a.no.localeCompare(b.no)).forEach(s=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="p-2 border">${s.no}</td><td class="p-2 border">${s.name}</td>`;
-        tbody.appendChild(tr);
-        const opt = document.createElement('option');
-        opt.value = s.no; opt.textContent = `${s.no} - ${s.name}`;
-        sel.appendChild(opt);
-      });
-      recomputeStats();
-    }
-
-    function renderMutations(){
-      const tbody = $('#tbody-mutasi');
-      const q = $('#filter-mutasi').value.trim().toLowerCase();
-      const d1 = $('#mutasi-from').value; const d2 = $('#mutasi-to').value;
-      tbody.innerHTML = '';
-      state.mutations
-        .filter(m=>{
-          const inText = `${m.code} ${m.name} ${m.storeNo||''} ${m.storeName||''}`.toLowerCase().includes(q);
-          const passDate = (!d1 || m.date >= d1) && (!d2 || m.date <= d2);
-          return inText && passDate;
-        })
-        .sort((a,b)=> (a.date+ a.type).localeCompare(b.date+ b.type))
-        .forEach(m=>{
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="p-2 border">${m.date}</td>
-            <td class="p-2 border ${m.type==='KELUAR'?'text-rose-700':'text-emerald-700'}">${m.type}</td>
-            <td class="p-2 border">${m.code}</td>
-            <td class="p-2 border">${m.name}</td>
-            <td class="p-2 border">${m.qty}</td>
-            <td class="p-2 border">${m.storeNo? `${m.storeNo} - ${m.storeName}` : ''}</td>`;
-          tbody.appendChild(tr);
+    // Render tabel barang
+    function renderBarang() {
+      const tbody = document.getElementById("tabel-barang");
+      const cari = document.getElementById("cari").value.toLowerCase();
+      tbody.innerHTML = "";
+      barang.filter(b => b.kode.toLowerCase().includes(cari) || b.nama.toLowerCase().includes(cari))
+        .forEach((item, i) => {
+          tbody.innerHTML += `
+            <tr>
+              <td class="border p-2">${item.kode}</td>
+              <td class="border p-2">${item.nama}</td>
+              <td class="border p-2">${item.qty}</td>
+              <td class="border p-2">${item.tanggal}</td>
+              <td class="border p-2">
+                <button onclick="hapusBarang(${i})" class="text-red-600">Hapus</button>
+              </td>
+            </tr>
+          `;
         });
     }
+    function hapusBarang(i) { barang.splice(i,1); renderBarang(); }
 
-    // ====== CRUD ITEMS ======
-    function addOrUpdateItem({code,name,qty,min,createdAt}){
-      const ex = state.items.find(i=>i.code===code);
-      if(ex){
-        ex.name = name ?? ex.name;
-        ex.qty = Number(ex.qty) + Number(qty||0);
-        if(min!==undefined && min!==null && min!=='') ex.min = Number(min);
-        if(createdAt && !ex.createdAt) ex.createdAt = createdAt;
-      } else {
-        state.items.push({code,name,qty:Number(qty||0), min: min===''||min==null? undefined : Number(min), createdAt});
-      }
-      save();
-      renderItems();
+    // Tambah store
+    document.getElementById("form-store").addEventListener("submit", e => {
+      e.preventDefault();
+      const nomor = document.getElementById("nomor-store").value;
+      const nama = document.getElementById("nama-store").value;
+      store.push({ nomor, nama });
+      renderStore();
+      e.target.reset();
+    });
+    function renderStore() {
+      const ul = document.getElementById("daftar-store");
+      const select = document.getElementById("store-keluar");
+      ul.innerHTML = ""; select.innerHTML = "<option disabled selected>Pilih Store</option>";
+      store.forEach(s => {
+        ul.innerHTML += `<li>${s.nomor} - ${s.nama}</li>`;
+        select.innerHTML += `<option>${s.nomor} - ${s.nama}</option>`;
+      });
+      document.getElementById("total-store").innerText = store.length;
     }
 
-    function openEditItem(code){
-      const it = state.items.find(i=>i.code===code);
-      if(!it) return;
-      const name = prompt('Nama barang', it.name);
-      if(name===null) return;
-      const qty = Number(prompt('Qty (angka)', it.qty));
-      if(Number.isNaN(qty)) return alert('Qty tidak valid');
-      const min = prompt('Min stock (opsional)', it.min??'');
-      it.name = name; it.qty = qty; it.min = min===''? undefined : Number(min);
-      save();
-      renderItems();
+    // Form keluar
+    document.getElementById("form-keluar").addEventListener("submit", e => {
+      e.preventDefault();
+      const kode = document.getElementById("kode-keluar").value;
+      const qty = parseInt(document.getElementById("qty-keluar").value);
+      const storeNama = document.getElementById("store-keluar").value;
+      const tanggal = new Date().toLocaleDateString();
+
+      const item = barang.find(b => b.kode === kode);
+      if (!item || item.qty < qty) return alert("Stok tidak cukup!");
+      item.qty -= qty;
+      transaksi.push({ tanggal, kode: item.kode, nama: item.nama, qty, jenis: "Keluar", store: storeNama });
+      renderBarang(); renderTransaksi();
+      e.target.reset();
+    });
+
+    // Render transaksi
+    function renderTransaksi() {
+      const tbody = document.getElementById("tabel-transaksi");
+      tbody.innerHTML = "";
+      transaksi.forEach(t => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="border p-2">${t.tanggal}</td>
+            <td class="border p-2">${t.kode}</td>
+            <td class="border p-2">${t.nama}</td>
+            <td class="border p-2">${t.qty}</td>
+            <td class="border p-2">${t.jenis}</td>
+            <td class="border p-2">${t.store}</td>
+          </tr>
+        `;
+      });
     }
 
-    function deleteItem(code){
-      if(!confirm('Hapus barang ini?')) return;
-      state.items = state.items.filter(i=>i.code!==code);
-      save();
-      renderItems();
-    }
-
-    // ====== FORMS SUBMIT ======
-    $('#form-masuk').addEventListener('submit', (e)=>{
-      e.preventDefault();
-      const code = $('#kode-masuk').value.trim();
-      const name = $('#nama-masuk').value.trim();
-      const qty = Number($('#qty-masuk').value);
-      const min = $('#min-masuk').value;
-      const date = $('#tgl-masuk').value || today();
-      if(!code || !name || Number.isNaN(qty)) return;
-      addOrUpdateItem({code,name,qty,min,createdAt: date});
-      state.mutations.push({date, type:'MASUK', code, name, qty});
-      save();
-      e.target.reset();
-      renderMutations();
-    });
-
-    $('#form-keluar').addEventListener('submit', (e)=>{
-      e.preventDefault();
-      const storeNo = $('#store-keluar').value;
-      const storeName = (state.stores.find(s=>s.no===storeNo)||{}).name;
-      const code = $('#kode-keluar').value.trim();
-      const qty = Number($('#qty-keluar').value);
-      const date = $('#tgl-keluar').value || today();
-      const it = state.items.find(i=>i.code===code);
-      if(!it) return alert('Barang tidak ditemukan');
-      if(it.qty < qty) return alert('Stok tidak cukup');
-      it.qty = Number(it.qty) - qty;
-      state.mutations.push({date, type:'KELUAR', code, name: it.name, qty, storeNo, storeName});
-      save();
-      e.target.reset();
-      renderItems();
-      renderMutations();
-    });
-
-    $('#form-store').addEventListener('submit', (e)=>{
-      e.preventDefault();
-      const no = $('#store-no').value.trim();
-      const name = $('#store-name').value.trim();
-      if(!no || !name) return;
-      if(state.stores.some(s=>s.no===no)) return alert('Nomor store sudah ada');
-      state.stores.push({no,name});
-      save();
-      e.target.reset();
-      renderStores();
-    });
-
-    // ====== REPORTS (PDF) & EXCEL ======
-    $('#btn-export-excel').addEventListener('click', ()=>{
-      const ws1 = XLSX.utils.json_to_sheet(state.items);
-      const ws2 = XLSX.utils.json_to_sheet(state.mutations);
-      const ws3 = XLSX.utils.json_to_sheet(state.stores);
+    // Export Excel
+    function downloadExcel() {
+      const ws = XLSX.utils.json_to_sheet(barang);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws1, 'Stok');
-      XLSX.utils.book_append_sheet(wb, ws2, 'Mutasi');
-      XLSX.utils.book_append_sheet(wb, ws3, 'Store');
-      XLSX.writeFile(wb, 'wms_export.xlsx');
-    });
-
-    $('#btn-export-pdf').addEventListener('click', ()=>{
-      const jenis = $('#laporan-jenis').value;
-      const d1 = $('#laporan-from').value; const d2 = $('#laporan-to').value;
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const title = jenis==='tersedia' ? 'Laporan Stok Tersedia' : (jenis==='masuk' ? 'Laporan Transaksi Masuk' : 'Laporan Transaksi Keluar');
-      doc.setFontSize(14);
-      doc.text(title, 40, 40);
-      doc.setFontSize(10);
-      const now = new Date();
-      doc.text(`Dibuat: ${now.toLocaleString()}`, 40, 58);
-
-      if(jenis==='tersedia'){
-        const rows = state.items
-          .filter(it=>it.qty>0)
-          .sort((a,b)=>a.code.localeCompare(b.code))
-          .map(it=>[it.code, it.name, it.qty, it.min ?? '', statusOf(it).label, it.createdAt || '']);
-        doc.autoTable({
-          head: [['Kode','Nama','Qty','Min','Status','Tgl Masuk']],
-          body: rows,
-          startY: 74,
-          styles:{ fontSize: 8 }
-        });
-      } else {
-        const rows = state.mutations
-          .filter(m=> m.type===(jenis==='masuk'?'MASUK':'KELUAR'))
-          .filter(m=> (!d1 || m.date>=d1) && (!d2 || m.date<=d2))
-          .sort((a,b)=> (a.date+a.code).localeCompare(b.date+b.code))
-          .map(m=>[m.date, m.type, m.code, m.name, m.qty, m.storeNo? `${m.storeNo} - ${m.storeName}` : '' ]);
-        doc.autoTable({
-          head: [['Tanggal','Tipe','Kode','Nama','Qty','Store']],
-          body: rows,
-          startY: 74,
-          styles:{ fontSize: 8 }
-        });
-      }
-
-      doc.save(`${title.replaceAll(' ','_').toLowerCase()}.pdf`);
-    });
-
-    // ====== FILTERS & SEARCH ======
-    $('#search-item').addEventListener('input', renderItems);
-    $('#filter-mutasi').addEventListener('input', renderMutations);
-    $('#btn-clear-mutasi').addEventListener('click', ()=>{ $('#filter-mutasi').value=''; $('#mutasi-from').value=''; $('#mutasi-to').value=''; renderMutations(); });
-
-    // ====== MENU NAV ======
-    const menuButtons = $$$('aside nav button');
-    menuButtons.forEach(btn=> btn.addEventListener('click', ()=>{
-      const target = btn.getAttribute('data-target');
-      if(!target) return; // non-section buttons (export/reset)
-      $$$('section > div').forEach(sec=> sec.id===target ? sec.classList.remove('hidden') : sec.classList.add('hidden'));
-      menuButtons.forEach(b=>b.classList.remove('menu-active'));
-      btn.classList.add('menu-active');
-    }));
-
-    // ====== DEMO DATA ======
-    $('#btn-add-demo').addEventListener('click', ()=>{
-      const demoItems = [
-        {code:'BRG-001', name:'Karton A', qty:120, min:50, createdAt: today()},
-        {code:'BRG-002', name:'Plastik B', qty:40, min:60, createdAt: today()},
-        {code:'BRG-003', name:'Label C', qty:0, min:10, createdAt: today()},
-      ];
-      const demoStores = [
-        {no:'S001', name:'Store Alpha'},
-        {no:'S002', name:'Store Beta'},
-      ];
-      demoItems.forEach(it=> addOrUpdateItem(it));
-      state.stores.push(...demoStores.filter(ds=>!state.stores.some(s=>s.no===ds.no)));
-      state.mutations.push({date: today(), type:'MASUK', code:'BRG-001', name:'Karton A', qty:120});
-      state.mutations.push({date: today(), type:'MASUK', code:'BRG-002', name:'Plastik B', qty:40});
-      state.mutations.push({date: today(), type:'MASUK', code:'BRG-003', name:'Label C', qty:0});
-      save();
-      renderStores();
-      renderItems();
-      renderMutations();
-      alert('Contoh data ditambahkan');
-    });
-
-    // ====== RESET DATA ======
-    $('#btn-reset').addEventListener('click', ()=>{
-      if(!confirm('Hapus semua data lokal?')) return;
-      state.items = []; state.stores = []; state.mutations = [];
-      save();
-      renderStores(); renderItems(); renderMutations(); recomputeStats();
-    });
-
-    // ====== INIT ======
-    function init(){
-      load();
-      // Set default dates
-      $('#tgl-masuk').value = today();
-      $('#tgl-keluar').value = today();
-
-      renderStores();
-      renderItems();
-      renderMutations();
-      // open default section
-      $$$('aside nav button[data-target]')[0].click();
+      XLSX.utils.book_append_sheet(wb, ws, "Barang");
+      XLSX.writeFile(wb, "stok.xlsx");
     }
 
-    document.addEventListener('DOMContentLoaded', init);
+    // Export PDF
+    async function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Laporan Stok", 10, 10);
+      barang.forEach((b, i) => {
+        doc.text(`${b.kode} - ${b.nama} : ${b.qty}`, 10, 20 + i*10);
+      });
+      doc.save("laporan.pdf");
+    }
+
+    // Realtime cari
+    document.getElementById("cari").addEventListener("input", renderBarang);
   </script>
 </body>
 </html>
