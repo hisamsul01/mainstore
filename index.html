@@ -4,17 +4,12 @@
   <meta charset="UTF-8">
   <title>📦 Sistem Manajemen Stok</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-    /* Animasi transisi */
-    .fade-enter { opacity: 0; transform: translateY(20px); }
-    .fade-enter-active { opacity: 1; transform: translateY(0); transition: all 0.5s ease-in-out; }
-    .fade-exit { opacity: 1; transform: translateY(0); }
-    .fade-exit-active { opacity: 0; transform: translateY(-20px); transition: all 0.5s ease-in-out; }
-  </style>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-<body class="bg-gray-100 flex min-h-screen">
+<body class="bg-gray-100 flex min-h-screen transition-colors duration-500">
 
   <!-- Sidebar -->
   <aside class="w-64 bg-blue-700 text-white p-6 flex flex-col space-y-4">
@@ -27,129 +22,170 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 p-6" id="main-content">
-
-    <!-- Dashboard -->
-    <section id="dashboard" class="page">
-      <h2 class="text-2xl font-bold mb-6">📊 Dashboard</h2>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="p-6 bg-gradient-to-r from-green-400 to-green-600 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
-          <h3 class="text-lg font-semibold">Barang Tersedia</h3>
-          <p id="stok-tersedia" class="text-3xl font-bold mt-2">0</p>
-        </div>
-        <div class="p-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
-          <h3 class="text-lg font-semibold">Hampir Habis</h3>
-          <p id="stok-hampir" class="text-3xl font-bold mt-2">0</p>
-        </div>
-        <div class="p-6 bg-gradient-to-r from-red-500 to-pink-600 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
-          <h3 class="text-lg font-semibold">Stok Habis</h3>
-          <p id="stok-habis" class="text-3xl font-bold mt-2">0</p>
-        </div>
-        <div class="p-6 bg-gradient-to-r from-blue-400 to-indigo-600 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
-          <h3 class="text-lg font-semibold">Jumlah Store</h3>
-          <p id="total-store" class="text-3xl font-bold mt-2">0</p>
+  <div class="flex-1 flex flex-col">
+    
+    <!-- Navbar -->
+    <nav class="flex justify-between items-center bg-white shadow px-6 py-3 sticky top-0 z-10">
+      <h2 class="text-xl font-bold">Dashboard Stok</h2>
+      <div class="flex items-center gap-6">
+        <button onclick="openUserModal()" class="flex items-center gap-2 text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+          <i class="ph ph-user-plus"></i> Tambah User
+        </button>
+        <div class="relative">
+          <button onclick="toggleDropdown()" class="flex items-center gap-2 text-sm bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition">
+            <i class="ph ph-gear"></i> Pengaturan
+          </button>
+          <div id="dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white border rounded shadow-lg">
+            <button onclick="toggleTheme()" class="block w-full text-left px-4 py-2 hover:bg-gray-100">🌙 Mode Gelap/Terang</button>
+            <button onclick="changeFont()" class="block w-full text-left px-4 py-2 hover:bg-gray-100">🔤 Ganti Font</button>
+            <button onclick="changeColor()" class="block w-full text-left px-4 py-2 hover:bg-gray-100">🎨 Ganti Warna Utama</button>
+            <hr>
+            <button onclick="backupData()" class="block w-full text-left px-4 py-2 hover:bg-gray-100">💾 Backup Data</button>
+            <button onclick="refreshPage()" class="block w-full text-left px-4 py-2 hover:bg-gray-100">🔄 Refresh</button>
+          </div>
         </div>
       </div>
-    </section>
+    </nav>
 
-    <!-- Barang -->
-    <section id="barang" class="page hidden">
-      <h2 class="text-2xl font-bold mb-6">📦 Barang</h2>
-      <form id="form-masuk" class="grid md:grid-cols-4 gap-4 mb-4">
-        <input type="text" id="kode" placeholder="Kode Barang" required class="border p-2 rounded">
-        <input type="text" id="nama" placeholder="Nama Barang" required class="border p-2 rounded">
-        <input type="number" id="qty" placeholder="Qty" required class="border p-2 rounded">
-        <button class="bg-green-600 text-white px-4 py-2 rounded">Tambah</button>
+    <!-- Halaman Konten -->
+    <main class="flex-1 p-6" id="main-content">
+
+      <!-- Dashboard -->
+      <section id="dashboard" class="page">
+        <h2 class="text-2xl font-bold mb-6">📊 Dashboard</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div class="p-6 bg-green-500 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+            <h3>Barang Tersedia</h3>
+            <p id="stok-tersedia" class="text-3xl font-bold">0</p>
+          </div>
+          <div class="p-6 bg-yellow-500 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+            <h3>Hampir Habis</h3>
+            <p id="stok-hampir" class="text-3xl font-bold">0</p>
+          </div>
+          <div class="p-6 bg-red-500 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+            <h3>Stok Habis</h3>
+            <p id="stok-habis" class="text-3xl font-bold">0</p>
+          </div>
+          <div class="p-6 bg-blue-500 rounded-2xl shadow-lg text-white transform transition hover:scale-105">
+            <h3>Jumlah Store</h3>
+            <p id="total-store" class="text-3xl font-bold">0</p>
+          </div>
+        </div>
+        <canvas id="stokChart" height="100"></canvas>
+      </section>
+
+      <!-- Barang -->
+      <section id="barang" class="page hidden">
+        <h2 class="text-2xl font-bold mb-6">📦 Barang Masuk</h2>
+        <form id="form-masuk" class="grid md:grid-cols-5 gap-4 mb-4">
+          <input type="text" id="kode" placeholder="Kode Barang" required class="border p-2 rounded">
+          <input type="text" id="nama" placeholder="Nama Barang" required class="border p-2 rounded">
+          <input type="number" id="qty" placeholder="Qty" required class="border p-2 rounded">
+          <input type="date" id="tgl-masuk" required class="border p-2 rounded">
+          <button class="bg-green-600 text-white px-4 py-2 rounded">Tambah</button>
+        </form>
+        <input type="text" id="cari" placeholder="Cari barang..." class="border p-2 rounded mb-4">
+        <table class="w-full border text-center bg-white shadow rounded">
+          <thead>
+            <tr class="bg-gray-200">
+              <th class="border p-2">Kode</th>
+              <th class="border p-2">Nama</th>
+              <th class="border p-2">Qty</th>
+              <th class="border p-2">Tanggal Masuk</th>
+              <th class="border p-2">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-barang"></tbody>
+        </table>
+      </section>
+
+      <!-- Transaksi -->
+      <section id="transaksi" class="page hidden">
+        <h2 class="text-2xl font-bold mb-6">📑 Barang Keluar</h2>
+        <form id="form-keluar" class="grid md:grid-cols-5 gap-4 mb-4">
+          <select id="store-keluar" required class="border p-2 rounded"></select>
+          <input type="text" id="kode-keluar" placeholder="Kode Barang" required class="border p-2 rounded">
+          <input type="number" id="qty-keluar" placeholder="Qty" required class="border p-2 rounded">
+          <input type="date" id="tgl-keluar" required class="border p-2 rounded">
+          <button class="bg-red-600 text-white px-4 py-2 rounded">Ambil</button>
+        </form>
+        <h3 class="text-xl font-semibold mt-6 mb-2">Mutasi Stok</h3>
+        <table class="w-full border text-center bg-white shadow rounded">
+          <thead>
+            <tr class="bg-gray-200">
+              <th class="border p-2">Tanggal</th>
+              <th class="border p-2">Kode</th>
+              <th class="border p-2">Nama</th>
+              <th class="border p-2">Qty</th>
+              <th class="border p-2">Jenis</th>
+              <th class="border p-2">Store</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-transaksi"></tbody>
+        </table>
+      </section>
+
+      <!-- Store -->
+      <section id="store" class="page hidden">
+        <h2 class="text-2xl font-bold mb-6">🏬 Store</h2>
+        <form id="form-store" class="grid md:grid-cols-3 gap-4 mb-4">
+          <input type="text" id="nomor-store" placeholder="Nomor Store" required class="border p-2 rounded">
+          <input type="text" id="nama-store" placeholder="Nama Store" required class="border p-2 rounded">
+          <button class="bg-blue-600 text-white px-4 py-2 rounded">Tambah Store</button>
+        </form>
+        <ul id="daftar-store" class="list-disc pl-5"></ul>
+      </section>
+
+      <!-- Laporan -->
+      <section id="laporan" class="page hidden">
+        <h2 class="text-2xl font-bold mb-6">📄 Laporan</h2>
+        <div class="flex gap-4 mb-4">
+          <button onclick="downloadExcel()" class="bg-green-600 text-white px-4 py-2 rounded">⬇️ Excel</button>
+          <button onclick="downloadPDF()" class="bg-red-600 text-white px-4 py-2 rounded">⬇️ PDF</button>
+        </div>
+        <canvas id="laporanChart" height="100"></canvas>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Tambah User -->
+  <div id="user-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-20">
+    <div class="bg-white p-6 rounded-lg w-96 shadow-lg">
+      <h3 class="text-xl font-semibold mb-4">Tambah User Baru</h3>
+      <form id="form-user" class="space-y-3">
+        <input type="text" id="username" placeholder="Nama User" required class="w-full border p-2 rounded">
+        <select id="role" class="w-full border p-2 rounded">
+          <option>Admin</option>
+          <option>Staff</option>
+        </select>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded w-full">Simpan</button>
       </form>
-      <input type="text" id="cari" placeholder="Cari barang..." class="border p-2 rounded mb-4">
-      <table class="w-full border text-center bg-white shadow rounded">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="border p-2">Kode</th>
-            <th class="border p-2">Nama</th>
-            <th class="border p-2">Qty</th>
-            <th class="border p-2">Tanggal Masuk</th>
-            <th class="border p-2">Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="tabel-barang"></tbody>
-      </table>
-    </section>
-
-    <!-- Transaksi -->
-    <section id="transaksi" class="page hidden">
-      <h2 class="text-2xl font-bold mb-6">📑 Transaksi</h2>
-      <form id="form-keluar" class="grid md:grid-cols-4 gap-4 mb-4">
-        <select id="store-keluar" required class="border p-2 rounded"></select>
-        <input type="text" id="kode-keluar" placeholder="Kode Barang" required class="border p-2 rounded">
-        <input type="number" id="qty-keluar" placeholder="Qty" required class="border p-2 rounded">
-        <button class="bg-red-600 text-white px-4 py-2 rounded">Ambil</button>
-      </form>
-      <h3 class="text-xl font-semibold mt-6 mb-2">Mutasi Stok</h3>
-      <table class="w-full border text-center bg-white shadow rounded">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="border p-2">Tanggal</th>
-            <th class="border p-2">Kode</th>
-            <th class="border p-2">Nama</th>
-            <th class="border p-2">Qty</th>
-            <th class="border p-2">Jenis</th>
-            <th class="border p-2">Store</th>
-          </tr>
-        </thead>
-        <tbody id="tabel-transaksi"></tbody>
-      </table>
-    </section>
-
-    <!-- Store -->
-    <section id="store" class="page hidden">
-      <h2 class="text-2xl font-bold mb-6">🏬 Store</h2>
-      <form id="form-store" class="grid md:grid-cols-3 gap-4 mb-4">
-        <input type="text" id="nomor-store" placeholder="Nomor Store" required class="border p-2 rounded">
-        <input type="text" id="nama-store" placeholder="Nama Store" required class="border p-2 rounded">
-        <button class="bg-blue-600 text-white px-4 py-2 rounded">Tambah Store</button>
-      </form>
-      <ul id="daftar-store" class="list-disc pl-5"></ul>
-    </section>
-
-    <!-- Laporan -->
-    <section id="laporan" class="page hidden">
-      <h2 class="text-2xl font-bold mb-6">📄 Laporan</h2>
-      <div class="flex gap-4">
-        <button onclick="downloadExcel()" class="bg-green-600 text-white px-4 py-2 rounded">⬇️ Excel</button>
-        <button onclick="downloadPDF()" class="bg-red-600 text-white px-4 py-2 rounded">⬇️ PDF</button>
-      </div>
-    </section>
-  </main>
-
-  <!-- Musik Latar -->
-  <audio autoplay loop>
-    <source src="musik.mp3" type="audio/mpeg">
-  </audio>
+      <button onclick="closeUserModal()" class="mt-3 text-sm text-gray-500 hover:underline">Batal</button>
+    </div>
+  </div>
 
   <script>
     let barang = [], store = [], transaksi = [];
+    let stokChart, laporanChart;
 
-    // Navigasi antar menu
+    // Navigasi
     function showPage(id) {
       document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
       document.getElementById(id).classList.remove("hidden");
+      if (id === "dashboard") updateChart();
+      if (id === "laporan") updateReportChart();
     }
 
-    // Tambah barang
+    // Barang masuk
     document.getElementById("form-masuk").addEventListener("submit", e => {
       e.preventDefault();
-      const kode = document.getElementById("kode").value;
-      const nama = document.getElementById("nama").value;
-      const qty = parseInt(document.getElementById("qty").value);
-      const tanggal = new Date().toLocaleDateString();
-
+      const kode = kode.value, nama = nama.value, qty = parseInt(qty.value), tanggal = tgl-masuk.value;
       barang.push({ kode, nama, qty, tanggal });
-      renderBarang();
+      renderBarang(); updateChart();
       e.target.reset();
     });
 
-    // Render tabel barang
+    // Render barang
     function renderBarang() {
       const tbody = document.getElementById("tabel-barang");
       const cari = document.getElementById("cari").value.toLowerCase();
@@ -165,13 +201,44 @@
               <td class="border p-2">
                 <button onclick="hapusBarang(${i})" class="text-red-600">Hapus</button>
               </td>
-            </tr>
-          `;
+            </tr>`;
         });
+      updateChart();
     }
-    function hapusBarang(i) { barang.splice(i,1); renderBarang(); }
+    function hapusBarang(i){ barang.splice(i,1); renderBarang(); }
 
-    // Tambah store
+    // Barang keluar
+    document.getElementById("form-keluar").addEventListener("submit", e => {
+      e.preventDefault();
+      const kode = document.getElementById("kode-keluar").value;
+      const qty = parseInt(document.getElementById("qty-keluar").value);
+      const storeNama = document.getElementById("store-keluar").value;
+      const tanggal = document.getElementById("tgl-keluar").value;
+
+      const item = barang.find(b => b.kode === kode);
+      if (!item || item.qty < qty) return alert("Stok tidak cukup!");
+      item.qty -= qty;
+      transaksi.push({ tanggal, kode: item.kode, nama: item.nama, qty, jenis: "Keluar", store: storeNama });
+      renderBarang(); renderTransaksi(); updateReportChart();
+      e.target.reset();
+    });
+
+    function renderTransaksi() {
+      const tbody = document.getElementById("tabel-transaksi");
+      tbody.innerHTML = "";
+      transaksi.forEach(t => {
+        tbody.innerHTML += `<tr>
+          <td class="border p-2">${t.tanggal}</td>
+          <td class="border p-2">${t.kode}</td>
+          <td class="border p-2">${t.nama}</td>
+          <td class="border p-2">${t.qty}</td>
+          <td class="border p-2">${t.jenis}</td>
+          <td class="border p-2">${t.store}</td>
+        </tr>`;
+      });
+    }
+
+    // Store
     document.getElementById("form-store").addEventListener("submit", e => {
       e.preventDefault();
       const nomor = document.getElementById("nomor-store").value;
@@ -191,61 +258,53 @@
       document.getElementById("total-store").innerText = store.length;
     }
 
-    // Form keluar
-    document.getElementById("form-keluar").addEventListener("submit", e => {
-      e.preventDefault();
-      const kode = document.getElementById("kode-keluar").value;
-      const qty = parseInt(document.getElementById("qty-keluar").value);
-      const storeNama = document.getElementById("store-keluar").value;
-      const tanggal = new Date().toLocaleDateString();
+    // Chart dashboard
+    function updateChart() {
+      const ctx = document.getElementById("stokChart").getContext("2d");
+      const total = barang.reduce((a,b) => a+b.qty, 0);
+      const hampir = barang.filter(b => b.qty < 10 && b.qty > 0).length;
+      const habis = barang.filter(b => b.qty === 0).length;
+      document.getElementById("stok-tersedia").innerText = total;
+      document.getElementById("stok-hampir").innerText = hampir;
+      document.getElementById("stok-habis").innerText = habis;
+      if(stokChart) stokChart.destroy();
+      stokChart = new Chart(ctx,{type:"pie",data:{labels:["Tersedia","Hampir Habis","Habis"],datasets:[{data:[total,hampir,habis],backgroundColor:["#22c55e","#eab308","#ef4444"]}]}})
+    }
 
-      const item = barang.find(b => b.kode === kode);
-      if (!item || item.qty < qty) return alert("Stok tidak cukup!");
-      item.qty -= qty;
-      transaksi.push({ tanggal, kode: item.kode, nama: item.nama, qty, jenis: "Keluar", store: storeNama });
-      renderBarang(); renderTransaksi();
-      e.target.reset();
-    });
-
-    // Render transaksi
-    function renderTransaksi() {
-      const tbody = document.getElementById("tabel-transaksi");
-      tbody.innerHTML = "";
-      transaksi.forEach(t => {
-        tbody.innerHTML += `
-          <tr>
-            <td class="border p-2">${t.tanggal}</td>
-            <td class="border p-2">${t.kode}</td>
-            <td class="border p-2">${t.nama}</td>
-            <td class="border p-2">${t.qty}</td>
-            <td class="border p-2">${t.jenis}</td>
-            <td class="border p-2">${t.store}</td>
-          </tr>
-        `;
-      });
+    // Chart laporan transaksi
+    function updateReportChart() {
+      const ctx = document.getElementById("laporanChart").getContext("2d");
+      const masuk = barang.reduce((a,b)=>a+b.qty,0);
+      const keluar = transaksi.reduce((a,t)=>a+t.qty,0);
+      if(laporanChart) laporanChart.destroy();
+      laporanChart = new Chart(ctx,{type:"bar",data:{labels:["Masuk","Keluar"],datasets:[{label:"Jumlah",data:[masuk,keluar],backgroundColor:["#22c55e","#ef4444"]}]}})
     }
 
     // Export Excel
-    function downloadExcel() {
+    function downloadExcel(){
       const ws = XLSX.utils.json_to_sheet(barang);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Barang");
-      XLSX.writeFile(wb, "stok.xlsx");
+      XLSX.utils.book_append_sheet(wb,ws,"Barang");
+      XLSX.writeFile(wb,"stok.xlsx");
     }
 
     // Export PDF
-    async function downloadPDF() {
-      const { jsPDF } = window.jspdf;
+    async function downloadPDF(){
+      const {jsPDF} = window.jspdf;
       const doc = new jsPDF();
-      doc.text("Laporan Stok", 10, 10);
-      barang.forEach((b, i) => {
-        doc.text(`${b.kode} - ${b.nama} : ${b.qty}`, 10, 20 + i*10);
-      });
+      doc.text("Laporan Stok",10,10);
+      barang.forEach((b,i)=>{ doc.text(`${b.kode} - ${b.nama} : ${b.qty}`,10,20+i*10); });
       doc.save("laporan.pdf");
     }
 
-    // Realtime cari
-    document.getElementById("cari").addEventListener("input", renderBarang);
-  </script>
-</body>
-</html>
+    // Dropdown
+    function toggleDropdown(){ document.getElementById("dropdown").classList.toggle("hidden"); }
+
+    // Modal user
+    function openUserModal(){ document.getElementById("user-modal").classList.remove("hidden"); }
+    function closeUserModal(){ document.getElementById("user-modal").classList.add("hidden"); }
+
+    // Setting
+    function toggleTheme(){ document.body.classList.toggle("bg-gray-900"); document.body.classList.toggle("text-white"); }
+    function changeFont(){ document.body.style.fontFamily = document.body.style.fontFamily==="serif"?"sans-serif":"serif"; }
+    function changeColor(){ document.querySelector("
