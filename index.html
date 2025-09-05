@@ -1,780 +1,645 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Manajemen Inventory — WMS</title>
-
-  <!-- TailwindCSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    /* sidebar like screenshot */
-    .sidebar { background:#2f3a40; color: #f8fafc; min-height:100vh; }
-    .sidebar button { text-align:left; }
-    .active-menu { background:#1f2933; }
-    /* table small */
-    table th, table td { font-size: 0.95rem; }
-  </style>
-</head>
-<body class="font-sans antialiased bg-gray-100">
-
-  <div class="flex">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar w-64 p-6 hidden md:block">
-      <h1 class="text-2xl font-bold mb-6">📦 Inventory</h1>
-      <nav class="space-y-1 text-sm">
-        <button data-page="dashboard" class="w-full px-3 py-2 rounded hover:bg-gray-800 active-menu">Dashboard</button>
-        <button data-page="master" class="w-full px-3 py-2 rounded hover:bg-gray-800">Master Barang</button>
-        <button data-page="stok-masuk" class="w-full px-3 py-2 rounded hover:bg-gray-800">Stok Masuk</button>
-        <button data-page="stok-keluar" class="w-full px-3 py-2 rounded hover:bg-gray-800">Stok Keluar</button>
-        <button data-page="rekap" class="w-full px-3 py-2 rounded hover:bg-gray-800">Rekap Stok</button>
-        <button data-page="opname" class="w-full px-3 py-2 rounded hover:bg-gray-800">Stok Opname</button>
-        <button data-page="laporan" class="w-full px-3 py-2 rounded hover:bg-gray-800">Laporan</button>
-        <div class="border-t border-gray-700 mt-4 pt-4">
-          <div class="text-xs text-gray-300 mb-1">Pengaturan</div>
-          <button id="backupBtn" class="w-full px-3 py-2 rounded hover:bg-gray-800 text-xs">💾 Backup (download)</button>
-          <label class="w-full block mt-2 text-xs">
-            <span class="sr-only">Restore</span>
-            <input id="restoreFile" type="file" accept="application/json" class="text-xs">
-          </label>
-          <button id="clearAll" class="w-full mt-2 px-3 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-xs">Hapus Semua (local)</button>
-        </div>
-      </nav>
-    </aside>
-
-    <!-- MAIN -->
-    <div class="flex-1 min-h-screen">
-
-      <!-- TOPBAR -->
-      <header class="bg-white shadow sticky top-0 z-20">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <button id="mobileMenu" class="md:hidden px-2 py-1 bg-gray-200 rounded">☰</button>
-          <div class="text-lg font-semibold">Sistem Manajemen Inventory</div>
-          <div class="ml-auto flex items-center gap-3">
-            <button id="addUserBtn" class="px-3 py-1 rounded bg-blue-600 text-white text-sm">Tambah User</button>
-
-            <div class="border rounded flex overflow-hidden">
-              <input id="globalSearch" placeholder="Cari barang..." class="px-3 py-1 w-64" />
-              <button id="searchBtn" class="px-3 bg-blue-600 text-white">Cari</button>
-            </div>
-
-            <button id="exportExcel" class="px-3 py-1 rounded bg-emerald-500 text-white text-sm">Export Excel</button>
-            <button id="exportPdf" class="px-3 py-1 rounded bg-yellow-400 text-sm">Export PDF</button>
-          </div>
-        </div>
-      </header>
-
-      <!-- CONTENT -->
-      <main class="max-w-7xl mx-auto px-4 py-6">
-
-        <!-- DASHBOARD -->
-        <section id="page-dashboard" class="page">
-          <div class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="p-6 bg-white rounded shadow">
-              <div class="text-sm text-gray-500">Barang Tersedia (unit)</div>
-              <div id="stat-tersedia" class="text-3xl font-bold">0</div>
-            </div>
-            <div class="p-6 bg-white rounded shadow">
-              <div class="text-sm text-gray-500">Barang Hampir Habis (jenis)</div>
-              <div id="stat-hampir" class="text-3xl font-bold">0</div>
-            </div>
-            <div class="p-6 bg-white rounded shadow">
-              <div class="text-sm text-gray-500">Barang Habis (jenis)</div>
-              <div id="stat-habis" class="text-3xl font-bold">0</div>
-            </div>
-            <div class="p-6 bg-white rounded shadow">
-              <div class="text-sm text-gray-500">Jumlah Store</div>
-              <div id="stat-store" class="text-3xl font-bold">0</div>
-            </div>
-          </div>
-
-          <div class="bg-white p-4 rounded shadow mb-6">
-            <h3 class="font-semibold mb-2">Grafik Stok Masuk vs Keluar</h3>
-            <canvas id="dashboardChart" height="120"></canvas>
-          </div>
-        </section>
-
-        <!-- MASTER BARANG -->
-        <section id="page-master" class="page hidden">
-          <div class="bg-white p-4 rounded shadow mb-4">
-            <h3 class="font-semibold">Master Barang</h3>
-            <p class="text-sm text-gray-500">Tambah / edit master barang. Stok awal diinput di sini.</p>
-
-            <form id="formMaster" class="grid md:grid-cols-5 gap-3 mt-3">
-              <input id="m_kode" placeholder="Kode Barang" class="border p-2 rounded" required />
-              <input id="m_nama" placeholder="Nama Barang" class="border p-2 rounded" required />
-              <input id="m_kategori" placeholder="Kategori" class="border p-2 rounded" />
-              <input id="m_stokAwal" type="number" placeholder="Stok Awal" class="border p-2 rounded" min="0" />
-              <button class="bg-blue-600 text-white px-4 py-2 rounded">Simpan</button>
-            </form>
-          </div>
-
-          <div class="bg-white p-4 rounded shadow">
-            <h4 class="font-semibold mb-2">Daftar Master Barang</h4>
-            <div class="overflow-x-auto">
-              <table class="min-w-full table-auto border-collapse">
-                <thead>
-                  <tr class="bg-gray-50">
-                    <th class="p-2 border">Kode</th>
-                    <th class="p-2 border">Nama</th>
-                    <th class="p-2 border">Kategori</th>
-                    <th class="p-2 border">Stok Awal</th>
-                    <th class="p-2 border">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="masterTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- STOK MASUK -->
-        <section id="page-stok-masuk" class="page hidden">
-          <div class="bg-white p-4 rounded shadow mb-4">
-            <h3 class="font-semibold">Stok Masuk</h3>
-            <form id="formMasuk" class="grid md:grid-cols-5 gap-3 mt-3">
-              <select id="ms_kode" class="border p-2 rounded" required></select>
-              <input id="ms_nama" placeholder="Nama (otomatis)" class="border p-2 rounded bg-gray-50" readonly />
-              <input id="ms_qty" type="number" placeholder="Qty" class="border p-2 rounded" min="1" required />
-              <input id="ms_tgl" type="date" class="border p-2 rounded" required />
-              <button class="bg-green-600 text-white px-4 py-2 rounded">Simpan Masuk</button>
-            </form>
-          </div>
-          <div class="bg-white p-4 rounded shadow">
-            <h4 class="font-semibold mb-2">Log Masuk Terakhir</h4>
-            <div class="overflow-x-auto">
-              <table class="min-w-full table-auto">
-                <thead><tr class="bg-gray-50"><th class="p-2 border">Tanggal</th><th class="p-2 border">Kode</th><th class="p-2 border">Nama</th><th class="p-2 border">Qty</th></tr></thead>
-                <tbody id="logMasukBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- STOK KELUAR -->
-        <section id="page-stok-keluar" class="page hidden">
-          <div class="bg-white p-4 rounded shadow mb-4">
-            <h3 class="font-semibold">Stok Keluar</h3>
-            <form id="formKeluar" class="grid md:grid-cols-6 gap-3 mt-3">
-              <select id="sk_store" class="border p-2 rounded" required></select>
-              <select id="sk_kode" class="border p-2 rounded" required></select>
-              <input id="sk_nama" placeholder="Nama (otomatis)" class="border p-2 rounded bg-gray-50" readonly />
-              <input id="sk_qty" type="number" placeholder="Qty" class="border p-2 rounded" min="1" required />
-              <input id="sk_tgl" type="date" class="border p-2 rounded" required />
-              <button class="bg-rose-600 text-white px-4 py-2 rounded">Simpan Keluar</button>
-            </form>
-          </div>
-          <div class="bg-white p-4 rounded shadow">
-            <h4 class="font-semibold mb-2">Log Keluar Terakhir</h4>
-            <div class="overflow-x-auto">
-              <table class="min-w-full table-auto">
-                <thead><tr class="bg-gray-50"><th class="p-2 border">Tanggal</th><th class="p-2 border">Store</th><th class="p-2 border">Kode</th><th class="p-2 border">Nama</th><th class="p-2 border">Qty</th></tr></thead>
-                <tbody id="logKeluarBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- REKAP -->
-        <section id="page-rekap" class="page hidden">
-          <div class="bg-white p-4 rounded shadow mb-4">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold">Rekap Stok</h3>
-              <div class="flex gap-2">
-                <button id="rekapExportExcel" class="px-3 py-1 bg-emerald-500 text-white rounded text-sm">Export Excel</button>
-                <button id="rekapExportPdf" class="px-3 py-1 bg-yellow-400 rounded text-sm">Export PDF</button>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <input id="rekapSearch" placeholder="Cari kode atau nama..." class="w-full md:w-1/2 border p-2 rounded" />
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="min-w-full table-auto border-collapse">
-                <thead>
-                  <tr class="bg-gray-50">
-                    <th class="p-2 border">Kode Barang</th>
-                    <th class="p-2 border">Nama Barang</th>
-                    <th class="p-2 border">Kategori</th>
-                    <th class="p-2 border">Stok Awal</th>
-                    <th class="p-2 border">Stok Masuk</th>
-                    <th class="p-2 border">Stok Keluar</th>
-                    <th class="p-2 border">Stok Akhir</th>
-                    <th class="p-2 border">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="rekapBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- STOK OPNAME -->
-        <section id="page-opname" class="page hidden">
-          <div class="bg-white p-4 rounded shadow">
-            <h3 class="font-semibold">Stok Opname</h3>
-            <p class="text-sm text-gray-500 mb-3">Masukkan hasil hitung fisik dan bandingkan.</p>
-            <div class="overflow-x-auto">
-              <table class="min-w-full table-auto">
-                <thead><tr class="bg-gray-50"><th class="p-2 border">Kode</th><th class="p-2 border">Nama</th><th class="p-2 border">Stok Sistem</th><th class="p-2 border">Hitung Fisik</th><th class="p-2 border">Aksi</th></tr></thead>
-                <tbody id="opnameBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- LAPORAN -->
-        <section id="page-laporan" class="page hidden">
-          <div class="bg-white p-4 rounded shadow mb-4">
-            <h3 class="font-semibold">Laporan & Analisis</h3>
-            <p class="text-sm text-gray-500 mb-3">Pilih rentang untuk melihat analisis grafik.</p>
-            <div class="grid md:grid-cols-3 gap-3 mb-3">
-              <input id="lapFrom" type="date" class="border p-2 rounded" />
-              <input id="lapTo" type="date" class="border p-2 rounded" />
-              <button id="lapGenerate" class="bg-blue-600 text-white px-4 py-2 rounded">Tampilkan</button>
-            </div>
-            <div class="bg-white p-3 rounded shadow">
-              <canvas id="lapChart" height="120"></canvas>
-            </div>
-          </div>
-        </section>
-
-      </main>
-    </div>
-  </div>
-
-  <!-- MODAL TAMBAH USER (sederhana) -->
-  <div id="userModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-40">
-    <div class="bg-white p-5 rounded shadow w-96">
-      <h4 class="font-semibold mb-2">Tambah User</h4>
-      <form id="formUser" class="space-y-2">
-        <input id="u_name" placeholder="Nama" class="w-full border p-2 rounded" required />
-        <select id="u_role" class="w-full border p-2 rounded">
-          <option>Admin</option>
-          <option>Staff</option>
-        </select>
-        <div class="flex justify-end gap-2">
-          <button type="button" id="closeUser" class="px-3 py-1 rounded border">Batal</button>
-          <button class="px-3 py-1 rounded bg-blue-600 text-white">Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-<script>
-/* =========================
-   STATE & STORAGE
-   ========================= */
-const STORAGE_KEY = 'wms_data_v1';
-let state = {
-  master: [],       // {kode, nama, kategori, stokAwal}
-  stores: [],       // {no, name}
-  masuk: [],        // {tanggal,kode,nama,qty}
-  keluar: [],       // {tanggal,kode,nama,qty,store}
-  users: []         // {name,role}
-};
-
-function loadState(){
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if(raw) {
-    try { state = JSON.parse(raw); } catch(e){ console.warn('parse err',e); }
-  } else {
-    // seed sample data for demo
-    state.master = [
-      {kode:'BRG001', nama:'Laptop Asus', kategori:'Elektronik', stokAwal:4},
-      {kode:'BRG002', nama:'Mouse Logitech', kategori:'Aksesoris', stokAwal:21},
-      {kode:'BRG003', nama:'Keyboard Mechanical', kategori:'Aksesoris', stokAwal:8},
-      {kode:'BRG004', nama:'Monitor 24"', kategori:'Elektronik', stokAwal:4},
-      {kode:'BRG005', nama:'Headset Gaming', kategori:'Aksesoris', stokAwal:10},
-      {kode:'BRG006', nama:'Speaker PC', kategori:'Elektronik', stokAwal:16},
-    ];
-    state.stores = [{no:'S001',name:'Store Alpha'},{no:'S002',name:'Store Beta'}];
-    state.masuk = [
-      {tanggal:'2025-08-01', kode:'BRG001', nama:'Laptop Asus', qty:1},
-      {tanggal:'2025-08-03', kode:'BRG002', nama:'Mouse Logitech', qty:2},
-      {tanggal:'2025-08-05', kode:'BRG003', nama:'Keyboard Mechanical', qty:4},
-    ];
-    state.keluar = [
-      {tanggal:'2025-08-10', kode:'BRG001', nama:'Laptop Asus', qty:1, store:'S001'},
-      {tanggal:'2025-08-12', kode:'BRG004', nama:'Monitor 24\"', qty:4, store:'S002'},
-    ];
-    state.users = [{name:'Admin', role:'Admin'}];
-    saveState();
-  }
-}
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-
-/* =========================
-   HELPERS
-   ========================= */
-function $(sel){ return document.querySelector(sel); }
-function $all(sel){ return Array.from(document.querySelectorAll(sel)); }
-
-function computeRekapFor(kode){
-  const masterItem = state.master.find(m=>m.kode===kode);
-  const stokAwal = masterItem ? Number(masterItem.stokAwal||0) : 0;
-  const masukSum = state.masuk.filter(x=>x.kode===kode).reduce((s,it)=>s+Number(it.qty||0),0);
-  const keluarSum = state.keluar.filter(x=>x.kode===kode).reduce((s,it)=>s+Number(it.qty||0),0);
-  const stokAkhir = stokAwal + masukSum - keluarSum;
-  return {stokAwal, masukSum, keluarSum, stokAkhir};
-}
-
-/* =========================
-   RENDER / UI
-   ========================= */
-
-function renderMenuActive(page){
-  $all('aside button[data-page]').forEach(btn=>{
-    if(btn.getAttribute('data-page')===page) btn.classList.add('active-menu'); else btn.classList.remove('active-menu');
-  });
-}
-
-/* show page by id */
-function showPage(pageId){
-  $all('.page').forEach(p=>p.classList.add('hidden'));
-  $(`#page-${pageId}`).classList.remove('hidden');
-  renderMenuActive(pageId);
-  // run page-specific rendering
-  if(pageId==='dashboard') renderDashboard();
-  if(pageId==='master') renderMasterList();
-  if(pageId==='stok-masuk') renderMasukUI();
-  if(pageId==='stok-keluar') renderKeluarUI();
-  if(pageId==='rekap') renderRekap();
-  if(pageId==='opname') renderOpname();
-  if(pageId==='laporan') renderLaporan();
-}
-
-/* DASHBOARD */
-let dashboardChart;
-function renderDashboard(){
-  // stats
-  const totalUnits = state.master.reduce((sum,m)=>{
-    const r = computeRekapFor(m.kode);
-    return sum + Number(r.stokAkhir||0);
-  },0);
-  const hampir = state.master.filter(m=>{
-    const r = computeRekapFor(m.kode);
-    return r.stokAkhir>0 && r.stokAkhir < 10;
-  }).length;
-  const habis = state.master.filter(m=> computeRekapFor(m.kode).stokAkhir <= 0 ).length;
-  $('#stat-tersedia').innerText = totalUnits;
-  $('#stat-hampir').innerText = hampir;
-  $('#stat-habis').innerText = habis;
-  $('#stat-store').innerText = state.stores.length;
-
-  // chart masuk vs keluar per total qty
-  const totalMasuk = state.masuk.reduce((s,x)=>s+Number(x.qty||0),0);
-  const totalKeluar = state.keluar.reduce((s,x)=>s+Number(x.qty||0),0);
-  const ctx = $('#dashboardChart').getContext('2d');
-  if(dashboardChart) dashboardChart.destroy();
-  dashboardChart = new Chart(ctx, {
-    type:'doughnut',
-    data:{
-      labels:['Masuk','Keluar'],
-      datasets:[{data:[totalMasuk,totalKeluar], backgroundColor:['#10b981','#ef4444']}]
-    },
-    options:{responsive:true}
-  });
-}
-
-/* MASTER */
-function renderMasterList(){
-  const tbody = $('#masterTableBody'); tbody.innerHTML = '';
-  state.master.forEach((m, i)=>{
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td class="p-2 border">${m.kode}</td>
-        <td class="p-2 border">${m.nama}</td>
-        <td class="p-2 border">${m.kategori||''}</td>
-        <td class="p-2 border">${m.stokAwal||0}</td>
-        <td class="p-2 border">
-          <button class="px-2 py-1 text-sm bg-yellow-300 rounded" onclick="editMaster(${i})">Edit</button>
-          <button class="px-2 py-1 text-sm bg-red-500 text-white rounded" onclick="deleteMaster(${i})">Hapus</button>
-        </td>
-      </tr>
-    `);
-  });
-}
-
-/* MASUK */
-function renderMasukUI(){
-  // fill select kode list
-  const sel = $('#ms_kode'); sel.innerHTML = '<option value="">-- pilih kode --</option>';
-  state.master.forEach(m=> sel.innerHTML += `<option value="${m.kode}">${m.kode} - ${m.nama}</option>`);
-  // logs
-  const tbody = $('#logMasukBody'); tbody.innerHTML = '';
-  state.masuk.slice().reverse().forEach(m=>{
-    tbody.insertAdjacentHTML('beforeend', `<tr><td class="p-2 border">${m.tanggal}</td><td class="p-2 border">${m.kode}</td><td class="p-2 border">${m.nama}</td><td class="p-2 border">${m.qty}</td></tr>`);
-  });
-}
-
-/* KELUAR */
-function renderKeluarUI(){
-  // fill store select
-  const selStore = $('#sk_store'); selStore.innerHTML = '<option value="">-- pilih store --</option>';
-  state.stores.forEach(s=> selStore.innerHTML += `<option value="${s.no}">${s.no} - ${s.name}</option>`);
-  // fill kode select
-  const selKode = $('#sk_kode'); selKode.innerHTML = '<option value="">-- pilih kode --</option>';
-  state.master.forEach(m=> selKode.innerHTML += `<option value="${m.kode}">${m.kode} - ${m.nama}</option>`);
-  // logs
-  const tbody = $('#logKeluarBody'); tbody.innerHTML = '';
-  state.keluar.slice().reverse().forEach(k=>{
-    tbody.insertAdjacentHTML('beforeend', `<tr><td class="p-2 border">${k.tanggal}</td><td class="p-2 border">${k.store||''}</td><td class="p-2 border">${k.kode}</td><td class="p-2 border">${k.nama}</td><td class="p-2 border">${k.qty}</td></tr>`);
-  });
-}
-
-/* REKAP */
-function renderRekap(){
-  const tbody = $('#rekapBody'); tbody.innerHTML = '';
-  const q = $('#rekapSearch').value.trim().toLowerCase();
-  state.master.forEach(m=>{
-    if(q && !(m.kode.toLowerCase().includes(q) || m.nama.toLowerCase().includes(q))) return;
-    const r = computeRekapFor(m.kode);
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td class="p-2 border">${m.kode}</td>
-        <td class="p-2 border">${m.nama}</td>
-        <td class="p-2 border">${m.kategori||''}</td>
-        <td class="p-2 border text-center">${r.stokAwal}</td>
-        <td class="p-2 border text-center">${r.masukSum}</td>
-        <td class="p-2 border text-center">${r.keluarSum}</td>
-        <td class="p-2 border text-center font-bold">${r.stokAkhir}</td>
-        <td class="p-2 border text-center">
-          <button class="px-2 py-1 text-sm bg-blue-500 text-white rounded" onclick="openEditMasterModal('${m.kode}')">Edit</button>
-        </td>
-      </tr>
-    `.replace('r.keluarSum', r.keluarSum)); // ensure substitution (backward compatibility)
-  });
-  // fix for correct shown keluarSum because we used string.
-  // We'll rebuild rows properly to avoid replace hack:
-  // Re-render more robust:
-  // (Instead, rebuild properly)
-  // We'll re-do:
-  tbody.innerHTML = '';
-  state.master.forEach(m=>{
-    if(q && !(m.kode.toLowerCase().includes(q) || m.nama.toLowerCase().includes(q))) return;
-    const r = computeRekapFor(m.kode);
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td class="p-2 border">${m.kode}</td>
-        <td class="p-2 border">${m.nama}</td>
-        <td class="p-2 border">${m.kategori||''}</td>
-        <td class="p-2 border text-center">${r.stokAwal}</td>
-        <td class="p-2 border text-center">${r.masukSum}</td>
-        <td class="p-2 border text-center">${r.keluarSum}</td>
-        <td class="p-2 border text-center font-bold">${r.stokAkhir}</td>
-        <td class="p-2 border text-center">
-          <button class="px-2 py-1 text-sm bg-blue-500 text-white rounded" onclick="openEditMasterModal('${m.kode}')">Edit</button>
-        </td>
-      </tr>
-    `);
-  });
-}
-
-/* OPNAME */
-function renderOpname(){
-  const tbody = $('#opnameBody'); tbody.innerHTML = '';
-  state.master.forEach((m,i)=>{
-    const r = computeRekapFor(m.kode);
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td class="p-2 border">${m.kode}</td>
-        <td class="p-2 border">${m.nama}</td>
-        <td class="p-2 border text-center">${r.stokAkhir}</td>
-        <td class="p-2 border text-center"><input data-idx="${i}" class="opname-input border p-1 w-24 text-center" type="number" min="0"/></td>
-        <td class="p-2 border text-center"><button class="px-2 py-1 bg-green-600 text-white rounded" onclick="saveOpname(${i})">Simpan</button></td>
-      </tr>
-    `);
-  });
-}
-
-/* LAPORAN */
-let lapChart;
-function renderLaporan(){
-  // default: use totals
-  const from = $('#lapFrom').value;
-  const to = $('#lapTo').value;
-  const masukFiltered = state.masuk.filter(m=> (!from || m.tanggal>=from) && (!to || m.tanggal<=to));
-  const keluarFiltered = state.keluar.filter(k=> (!from || k.tanggal>=from) && (!to || k.tanggal<=to));
-  // group by date sum
-  const map = {};
-  masukFiltered.forEach(m=> { map[m.tanggal] = map[m.tanggal] || {masuk:0,keluar:0}; map[m.tanggal].masuk += Number(m.qty||0); });
-  keluarFiltered.forEach(k=> { map[k.tanggal] = map[k.tanggal] || {masuk:0,keluar:0}; map[k.tanggal].keluar += Number(k.qty||0); });
-  const labels = Object.keys(map).sort();
-  const dataMasuk = labels.map(d => map[d].masuk);
-  const dataKeluar = labels.map(d => map[d].keluar);
-  const ctx = $('#lapChart').getContext('2d');
-  if(lapChart) lapChart.destroy();
-  lapChart = new Chart(ctx, { type:'bar', data:{
-    labels, datasets:[
-      { label:'Masuk', data:dataMasuk, backgroundColor:'#10b981' },
-      { label:'Keluar', data:dataKeluar, backgroundColor:'#ef4444' }
-    ]
-  }, options:{responsive:true, scales:{x:{ stacked:false }, y:{ beginAtZero:true }}}});
-}
-
-/* =========================
-   EVENTS / ACTIONS
-   ========================= */
-
-document.addEventListener('DOMContentLoaded', ()=>{
-  loadState();
-  // attach menu buttons
-  $all('aside button[data-page]').forEach(btn=>{
-    btn.addEventListener('click', ()=> showPage(btn.getAttribute('data-page')));
-  });
-  // mobile menu open
-  $('#mobileMenu').addEventListener('click', ()=> document.querySelector('aside').classList.toggle('hidden'));
-
-  // default page
-  showPage('rekap');
-
-  // master form
-  $('#formMaster').addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const kode = $('#m_kode').value.trim();
-    const nama = $('#m_nama').value.trim();
-    const kategori = $('#m_kategori').value.trim();
-    const stokAwal = Number($('#m_stokAwal').value || 0);
-    if(!kode || !nama) return alert('lengkapi kode & nama');
-    const exists = state.master.find(m=>m.kode===kode);
-    if(exists) {
-      if(!confirm('Kode sudah ada. Update data?')) return;
-      exists.nama = nama; exists.kategori = kategori; exists.stokAwal = stokAwal;
-    } else {
-      state.master.push({kode,nama,kategori,stokAwal});
-    }
-    saveState(); renderMasterList(); renderMasukUI(); renderKeluarUI(); renderRekap(); renderOpname(); renderDashboard();
-    e.target.reset();
-    alert('Sukses menyimpan master barang');
-  });
-
-  // masuk form
-  $('#formMasuk').addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const kode = $('#ms_kode').value;
-    const nama = $('#ms_nama').value;
-    const qty = Number($('#ms_qty').value || 0);
-    const tanggal = $('#ms_tgl').value;
-    if(!kode || !tanggal || qty<=0) return alert('Lengkapi data masuk');
-    state.masuk.push({tanggal,kode,nama,qty});
-    saveState(); renderMasukUI(); renderRekap(); renderOpname(); renderDashboard(); alert('Stok masuk tersimpan');
-    e.target.reset();
-  });
-
-  // when select kode, fill name
-  $('#ms_kode').addEventListener('change', (e)=>{
-    const kode = e.target.value;
-    const m = state.master.find(x=>x.kode===kode);
-    $('#ms_nama').value = m ? m.nama : '';
-  });
-
-  // keluar form
-  $('#formKeluar').addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const kode = $('#sk_kode').value;
-    const nama = $('#sk_nama').value;
-    const qty = Number($('#sk_qty').value || 0);
-    const tanggal = $('#sk_tgl').value;
-    const store = $('#sk_store').value;
-    if(!kode || !tanggal || qty<=0 || !store) return alert('Lengkapi data keluar');
-    // find master and check stock
-    const r = computeRekapFor(kode);
-    if(r.stokAkhir < qty) return alert('Stok tidak cukup!');
-    state.keluar.push({tanggal,kode,nama,qty,store});
-    saveState(); renderKeluarUI(); renderRekap(); renderOpname(); renderDashboard(); alert('Stok keluar tersimpan');
-    e.target.reset();
-  });
-
-  $('#sk_kode').addEventListener('change', (e)=>{
-    const kode = e.target.value;
-    const m = state.master.find(x=>x.kode===kode);
-    $('#sk_nama').value = m ? m.nama : '';
-  });
-
-  // store form not shown as separate page but create small helper to add store quickly:
-  // We'll allow adding via prompt (or can create separate form). For now build small UI: add by double-click store list? We'll allow via console helper:
-  // add store via modal? For simplicity, add keyboard shortcut:
-  // But also add via restore/seed button - we already seeded sample stores.
-
-  // Rekap search
-  $('#rekapSearch').addEventListener('input', renderRekap);
-
-  // Export excel (rekap)
-  $('#rekapExportExcel').addEventListener('click', ()=>{
-    const rows = state.master.map(m=>{
-      const r = computeRekapFor(m.kode);
-      return { Kode:m.kode, Nama:m.nama, Kategori:m.kategori||'', StokAwal:r.stokAwal, StokMasuk:r.masukSum, StokKeluar:r.keluarSum, StokAkhir:r.stokAkhir };
-    });
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Stok');
-    XLSX.writeFile(wb, 'rekap_stok.xlsx');
-  });
-
-  // Export PDF (rekap) using jsPDF autoTable
-  $('#rekapExportPdf').addEventListener('click', ()=>{
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l','pt','a4');
-    const headers = [['Kode','Nama','Kategori','Stok Awal','Stok Masuk','Stok Keluar','Stok Akhir']];
-    const body = state.master.map(m=>{
-      const r = computeRekapFor(m.kode);
-      return [m.kode, m.nama, m.kategori||'', r.stokAwal, r.masukSum, r.keluarSum, r.stokAkhir];
-    });
-    doc.text('Rekap Stok', 40, 40);
-    doc.autoTable({ head: headers, body, startY: 70, styles:{fontSize:10} });
-    doc.save('rekap_stok.pdf');
-  });
-
-  // global export buttons (general)
-  $('#exportExcel').addEventListener('click', ()=>{
-    const wb = XLSX.utils.book_new();
-    const wsMaster = XLSX.utils.json_to_sheet(state.master);
-    const wsMasuk = XLSX.utils.json_to_sheet(state.masuk);
-    const wsKeluar = XLSX.utils.json_to_sheet(state.keluar);
-    const wsStores = XLSX.utils.json_to_sheet(state.stores);
-    XLSX.utils.book_append_sheet(wb, wsMaster, 'Master');
-    XLSX.utils.book_append_sheet(wb, wsMasuk, 'Masuk');
-    XLSX.utils.book_append_sheet(wb, wsKeluar, 'Keluar');
-    XLSX.utils.book_append_sheet(wb, wsStores, 'Stores');
-    XLSX.writeFile(wb, 'wms_export.xlsx');
-  });
-
-  $('#exportPdf').addEventListener('click', ()=>{
-    // quick export summary PDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text('Ringkasan Inventory', 20, 20);
-    const rows = state.master.map(m=> [m.kode, m.nama, computeRekapFor(m.kode).stokAkhir]);
-    doc.autoTable({ head:[['Kode','Nama','Stok Akhir']], body:rows, startY:40 });
-    doc.save('wms_summary.pdf');
-  });
-
-  // Rekap keyboard search button
-  $('#searchBtn').addEventListener('click', ()=> { const q = $('#globalSearch').value.trim().toLowerCase(); $('#rekapSearch').value = q; showPage('rekap'); renderRekap(); });
-
-  // Add user modal
-  $('#addUserBtn').addEventListener('click', ()=> $('#userModal').classList.remove('hidden'));
-  $('#closeUser').addEventListener('click', ()=> $('#userModal').classList.add('hidden'));
-  $('#formUser').addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const name = $('#u_name').value.trim();
-    const role = $('#u_role').value;
-    if(!name) return alert('Isi nama user');
-    state.users.push({name,role});
-    saveState();
-    $('#userModal').classList.add('hidden');
-    alert('User disimpan');
-    e.target.reset();
-  });
-
-  // Backup / restore
-  $('#backupBtn').addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'wms_backup.json'; a.click(); URL.revokeObjectURL(url);
-  });
-  $('#restoreFile').addEventListener('change', (e)=>{
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = ()=> {
-      try {
-        const parsed = JSON.parse(reader.result);
-        if(confirm('Restore akan menggantikan data saat ini. Lanjutkan?')) {
-          state = parsed; saveState(); alert('Restore berhasil'); location.reload();
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Management System - Hotel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         }
-      } catch(err){ alert('File tidak valid'); }
-    };
-    reader.readAsText(file);
-  });
-  // clear all
-  $('#clearAll').addEventListener('click', ()=>{
-    if(confirm('Hapus semua data lokal?')) { localStorage.removeItem(STORAGE_KEY); location.reload(); }
-  });
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #2563eb;
+            transform: translateY(-2px);
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -8px;
+            left: 0;
+            background-color: #2563eb;
+            transition: width 0.3s ease;
+        }
+        .active::after {
+            width: 100%;
+        }
+        .card {
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        .section {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            transition: background-color 0.3s ease;
+        }
+        th {
+            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            font-weight: bold;
+        }
+        tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+        .notification {
+            background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 8px;
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .search-input {
+            border-radius: 8px;
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            transition: border-color 0.3s ease;
+        }
+        .search-input:focus {
+            border-color: #2563eb;
+            outline: none;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .btn-danger {
+            background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 50;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 400px;
+            width: 90%;
+        }
+        @media (max-width: 768px) {
+            .nav-links {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .nav-link {
+                padding: 15px;
+                text-align: center;
+            }
+            .chart-container {
+                height: 300px !important;
+            }
+        }
+        .chart-container {
+            height: 250px;
+        }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col">
+    <nav class="bg-white/80 backdrop-blur-md shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold text-gray-800 flex items-center">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/f3f0a826-e80a-49ac-9477-55d7357a1f46.png" alt="Icon depicting a modern warehouse facility with automated forklifts moving stacks of products in a clean, organized environment" class="inline mr-3 rounded-full" width="40" height="40" />
+                Warehouse Management
+            </div>
+            <div class="nav-links flex space-x-6 text-gray-600">
+                <a href="#dashboard" class="nav-link px-4 py-2 cursor-pointer active" onclick="showSection('dashboard')">Dashboard</a>
+                <a href="#items" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('items')">Items</a>
+                <a href="#receive" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('receive')">Receive Goods</a>
+                <a href="#dispatch" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('dispatch')">Dispatch to Outlets</a>
+                <a href="#reports" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('reports')">Reports</a>
+            </div>
+        </div>
+    </nav>
 
-  // Editing & delete master helpers
-  window.editMaster = function(i){
-    const m = state.master[i];
-    const kode = prompt('Kode', m.kode); if(kode===null) return;
-    const nama = prompt('Nama', m.nama); if(nama===null) return;
-    const kategori = prompt('Kategori', m.kategori||''); if(kategori===null) return;
-    const stokAwal = Number(prompt('Stok Awal', m.stokAwal)||0);
-    m.kode = kode; m.nama = nama; m.kategori = kategori; m.stokAwal = stokAwal;
-    saveState(); renderMasterList(); renderRekap(); renderMasukUI(); renderKeluarUI(); renderDashboard();
-  };
-  window.deleteMaster = function(i){
-    if(!confirm('Hapus master barang?')) return;
-    const kode = state.master[i].kode;
-    state.master.splice(i,1);
-    // optional: remove related masuk/keluar
-    state.masuk = state.masuk.filter(x=>x.kode!==kode);
-    state.keluar = state.keluar.filter(x=>x.kode!==kode);
-    saveState(); renderMasterList(); renderRekap(); renderMasukUI(); renderKeluarUI(); renderDashboard();
-  };
+    <div class="mt-20 flex-1">
+        <div id="dashboard" class="section container mx-auto px-4 py-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-6 text-center">Dashboard Overview</h1>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="card bg-white p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
+                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/6d37e4d3-9b57-4554-8879-0b2c702d06d2.png" alt="Small icon of a package indicating total stock" class="mr-2" />
+                        Total Items in Stock
+                    </h2>
+                    <p id="totalStock" class="text-3xl font-bold text-blue-600">0</p>
+                </div>
+                <div class="card bg-white p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
+                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b89feb9e-efea-4e0c-af7e-cfbc4001a465.png" alt="Small icon of a receipt indicating pending receipts" class="mr-2" />
+                        Pending Receipts
+                    </h2>
+                    <p id="pendingReceipts" class="text-3xl font-bold text-yellow-600">0</p>
+                </div>
+                <div class="card bg-white p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
+                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/f74e4945-7d5a-405f-b83e-1067720aa427.png" alt="Small icon of a truck indicating today's dispatches" class="mr-2" />
+                        Today's Dispatches
+                    </h2>
+                    <p id="todayDispatches" class="text-3xl font-bold text-green-600">0</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="card bg-white p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-4">Stock Levels Chart</h3>
+                    <canvas id="stockChart" class="chart-container"></canvas>
+                </div>
+                <div class="card bg-white p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-4">Recent Activities</h3>
+                    <ul id="activityList" class="space-y-2">
+                        <!-- Dynamically populated -->
+                    </ul>
+                </div>
+            </div>
+            <div id="notifications" class="mb-8"></div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Quick Actions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
+                <button onclick="showSection('receive')" class="btn-primary text-center">Receive New Goods</button>
+                <button onclick="showSection('dispatch')" class="btn-primary text-center bg-green-600 hover:bg-green-700">Dispatch to Outlet</button>
+            </div>
+        </div>
 
-  // edit master modal by kode
-  window.openEditMasterModal = function(kode){
-    const idx = state.master.findIndex(m=>m.kode===kode);
-    if(idx>=0) editMaster(idx);
-  };
+        <div id="items" class="section container mx-auto px-4 py-8 hidden">
+            <h1 class="text-4xl font-bold text-gray-800 mb-6">Manage Items</h1>
+            <form id="itemForm" class="card bg-white p-6 rounded-xl mb-6">
+                <h2 class="text-xl font-semibold mb-4">Add/Edit Item</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input type="text" id="itemName" placeholder="Item Name" class="border p-3 rounded-lg" required>
+                    <input type="text" id="itemCategory" placeholder="Category" class="border p-3 rounded-lg">
+                    <input type="number" id="itemStock" placeholder="Initial Stock" class="border p-3 rounded-lg" required>
+                </div>
+                <button type="submit" class="btn-primary">Save Item</button>
+            </form>
+            <div class="card bg-white p-6 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Item List</h2>
+                    <input type="text" id="itemSearch" class="search-input" placeholder="Search items...">
+                </div>
+                <table id="itemTable" class="mb-4">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Stock</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
 
-  // Opname save (adjust stokAwal to match physical count by updating stokAwal to hitung required)
-  window.saveOpname = function(idx){
-    const input = document.querySelector(`.opname-input[data-idx='${idx}']`);
-    if(!input) return;
-    const val = Number(input.value || 0);
-    if(!confirm('Simpan hasil opname dan sesuaikan stok awal untuk mencocokkan sistem?')) return;
-    // Current system stock:
-    const kode = state.master[idx].kode;
-    const r = computeRekapFor(kode);
-    // To make system show `val` as current, adjust stokAwal by delta:
-    const delta = val - r.stokAkhir;
-    state.master[idx].stokAwal = Number(state.master[idx].stokAwal || 0) + delta;
-    saveState(); renderOpname(); renderRekap(); renderDashboard();
-    alert('Opname disimpan dan stok disesuaikan');
-  };
+        <div id="receive" class="section container mx-auto px-4 py-8 hidden">
+            <h1 class="text-4xl font-bold text-gray-800 mb-6">Receive Goods</h1>
+            <form id="receiveForm" class="card bg-white p-6 rounded-xl mb-6">
+                <h2 class="text-xl font-semibold mb-4">Record Receipt</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <select id="receiveItem" class="border p-3 rounded-lg">
+                        <option value="">Select Item</option>
+                    </select>
+                    <input type="number" id="receiveQty" placeholder="Quantity" class="border p-3 rounded-lg" required>
+                    <input type="text" id="receiveSupplier" placeholder="Supplier" class="border p-3 rounded-lg">
+                </div>
+                <button type="submit" class="btn-primary">Receive Goods</button>
+            </form>
+            <div class="card bg-white p-6 rounded-xl">
+                <h2 class="text-xl font-semibold mb-4">Receipt History</h2>
+                <table id="receiptTable">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Supplier</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
 
-  // stok masuk/keluar select change auto-fill name
-  $('#ms_kode').addEventListener('change', (e)=> {
-    const m = state.master.find(x=>x.kode===e.target.value); $('#ms_nama').value = m ? m.nama : '';
-  });
-  $('#sk_kode').addEventListener('change', (e)=> {
-    const m = state.master.find(x=>x.kode===e.target.value); $('#sk_nama').value = m ? m.nama : '';
-  });
+        <div id="dispatch" class="section container mx-auto px-4 py-8 hidden">
+            <h1 class="text-4xl font-bold text-gray-800 mb-6">Dispatch to Outlets</h1>
+            <form id="dispatchForm" class="card bg-white p-6 rounded-xl mb-6">
+                <h2 class="text-xl font-semibold mb-4">Record Dispatch</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <select id="dispatchItem" class="border p-3 rounded-lg">
+                        <option value="">Select Item</option>
+                    </select>
+                    <input type="number" id="dispatchQty" placeholder="Quantity" class="border p-3 rounded-lg" required>
+                    <select id="dispatchOutlet" class="border p-3 rounded-lg">
+                        <option value="">Select Outlet</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Room Service">Room Service</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Dispatch Goods</button>
+            </form>
+            <div class="card bg-white p-6 rounded-xl">
+                <h2 class="text-xl font-semibold mb-4">Dispatch History</h2>
+                <table id="dispatchTable">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Outlet</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
 
-  // Rekap search
-  $('#rekapSearch').addEventListener('input', renderRekap);
+        <div id="reports" class="section container mx-auto px-4 py-8 hidden">
+            <h1 class="text-4xl font-bold text-gray-800 mb-6">Reports</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card bg-white p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold mb-4">Stock Report</h2>
+                    <table id="stockReport">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="card bg-white p-6 rounded-xl">
+                    <h2 class="text-xl font-semibold mb-4">Recent Activities</h2>
+                    <table id="activityReport">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  // General export buttons (topbar)
-  $('#exportExcel').addEventListener('click', ()=> $('#exportExcel').click()); // handled above
-  $('#exportPdf').addEventListener('click', ()=> $('#exportPdf').click());
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-sm">© 2024 Warehouse Management System for Hotels. Crafted for efficiency and professionalism.</p>
+            <p class="text-xs mt-2 flex justify-center items-center">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/160aa0a3-0dcf-484a-a6a8-5589f8baca5d.png" alt="Small icon of a shield representing security and reliability" class="mr-2" />
+                Secure & Reliable | Powered by Modern Web Technology
+            </p>
+        </div>
+    </footer>
 
-  // Rekap export already bound above - we also attach general top exports to same actions:
-  // Already done earlier.
+    <!-- Modal for Confirmations -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">Confirm Action</h3>
+            <p id="modalMessage" class="mb-4">Are you sure you want to proceed?</p>
+            <button id="confirmYes" class="btn-danger mr-2">Yes</button>
+            <button onclick="closeModal()" class="btn-primary">No</button>
+        </div>
+    </div>
 
-  // laporan generate
-  $('#lapGenerate').addEventListener('click', renderLaporan);
+    <script>
+        const sections = ['dashboard', 'items', 'receive', 'dispatch', 'reports'];
+        let currentSection = 'dashboard';
+        let stockChart;
 
-  // initial renders
-  renderMasterList(); renderMasukUI(); renderKeluarUI(); renderRekap(); renderOpname(); renderDashboard();
-});
+        function showSection(sectionId) {
+            document.getElementById(currentSection).classList.add('hidden');
+            document.getElementById(sectionId).classList.remove('hidden');
+            currentSection = sectionId;
+            updateActiveNav();
+        }
 
-/* =========================
-   Utility: small fixes where needed
-   ========================= */
+        function updateActiveNav() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[onclick="showSection('${currentSection}')"]`).classList.add('active');
+        }
 
-// expose computeRekapFor to console for debug
-window.computeRekapFor = computeRekapFor;
-</script>
+        let items = JSON.parse(localStorage.getItem('items')) || [
+            { name: 'Rice', category: 'Food', stock: 100 },
+            { name: 'Chicken', category: 'Meat', stock: 50 },
+            { name: 'Beer', category: 'Beverage', stock: 200 }
+        ];
+
+        let receipts = JSON.parse(localStorage.getItem('receipts')) || [];
+        let dispatches = JSON.parse(localStorage.getItem('dispatches')) || [];
+
+        function saveData() {
+            localStorage.setItem('items', JSON.stringify(items));
+            localStorage.setItem('receipts', JSON.stringify(receipts));
+            localStorage.setItem('dispatches', JSON.stringify(dispatches));
+        }
+
+        function loadDashboard() {
+            document.getElementById('totalStock').textContent = items.reduce((sum, item) => sum + item.stock, 0);
+            document.getElementById('pendingReceipts').textContent = receipts.filter(r => !r.processed).length;
+            document.getElementById('todayDispatches').textContent = dispatches.filter(d => new Date(d.date).toDateString() === new Date().toDateString()).length;
+
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            if (stockChart) stockChart.destroy();
+            stockChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: items.map(item => item.name),
+                    datasets: [{
+                        label: 'Stock Levels',
+                        data: items.map(item => item.stock),
+                        backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            const activityList = document.getElementById('activityList');
+            activityList.innerHTML = '';
+            [...receipts.slice(-5), ...dispatches.slice(-5)].forEach(activity => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center space-x-2';
+                li.innerHTML = `
+                    <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    <span>${activity.type || 'Receipt'}: ${activity.item ? activity.item.name : ''} (${activity.qty}) on ${activity.date}</span>
+                `;
+                activityList.appendChild(li);
+            });
+
+            const lowStock = items.filter(item => item.stock < 20).map(item => `${item.name} has low stock (${item.stock})`);
+            const notifications = document.getElementById('notifications');
+            notifications.innerHTML = '';
+            if (lowStock.length > 0) {
+                lowStock.forEach(note => {
+                    const div = document.createElement('div');
+                    div.className = 'notification';
+                    div.textContent = 'Alert: ' + note;
+                    notifications.appendChild(div);
+                });
+            }
+        }
+
+        function loadItems() {
+            const tbody = document.querySelector('#itemTable tbody');
+            tbody.innerHTML = '';
+            items.forEach((item, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${item.category}</td>
+                    <td>${item.stock}</td>
+                    <td>
+                        <button onclick="editItem(${index})" class="btn-primary text-sm mr-2" title="Edit Item">Edit</button>
+                        <button onclick="confirmDelete(${index})" class="btn-danger text-sm" title="Delete Item">Delete</button>
+                    </td>
+                `;
+            });
+
+            const itemSelects = ['receiveItem', 'dispatchItem'];
+            itemSelects.forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '<option value="">Select Item</option>';
+                items.forEach((item, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = item.name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function loadReceipts() {
+            const tbody = document.querySelector('#receiptTable tbody');
+            tbody.innerHTML = '';
+            receipts.forEach(receipt => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${receipt.item.name}</td>
+                    <td>${receipt.qty}</td>
+                    <td>${receipt.supplier}</td>
+                    <td>${receipt.date}</td>
+                `;
+            });
+        }
+
+        function loadDispatches() {
+            const tbody = document.querySelector('#dispatchTable tbody');
+            tbody.innerHTML = '';
+            dispatches.forEach(dispatch => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${dispatch.item.name}</td>
+                    <td>${dispatch.qty}</td>
+                    <td>${dispatch.outlet}</td>
+                    <td>${dispatch.date}</td>
+                `;
+            });
+        }
+
+        function loadReports() {
+            const stockTbody = document.querySelector('#stockReport tbody');
+            stockTbody.innerHTML = '';
+            items.forEach(item => {
+                const row = stockTbody.insertRow();
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${item.stock}</td>
+                `;
+            });
+
+            const activityTbody = document.querySelector('#activityReport tbody');
+            activityTbody.innerHTML = '';
+            [...receipts.slice(-5), ...dispatches.slice(-5)].forEach(activity => {
+                const row = activityTbody.insertRow();
+                row.innerHTML = `
+                    <td>${activity.type || 'Receipt'}</td>
+                    <td>${activity.item ? activity.item.name : ''}</td>
+                    <td>${activity.qty}</td>
+                    <td>${activity.date}</td>
+                `;
+            });
+        }
+
+        // Search functionality
+        document.getElementById('itemSearch').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#itemTable tbody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Form submissions
+        document.getElementById('itemForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('itemName').value;
+            const category = document.getElementById('itemCategory').value;
+            const stock = parseInt(document.getElementById('itemStock').value);
+
+            if (document.getElementById('itemForm').dataset.editIndex) {
+                const index = parseInt(document.getElementById('itemForm').dataset.editIndex);
+                items[index] = { ...items[index], name, category, stock };
+                delete document.getElementById('itemForm').dataset.editIndex;
+            } else {
+                items.push({ name, category, stock });
+            }
+
+            saveData();
+            loadItems();
+            loadDashboard();
+            this.reset();
+            showSection('items');
+        });
+
+        document.getElementById('receiveForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const itemIndex = document.getElementById('receiveItem').value;
+            const qty = parseInt(document.getElementById('receiveQty').value);
+            const supplier = document.getElementById('receiveSupplier').value;
+
+            items[itemIndex].stock += qty;
+            receipts.push({ item: items[itemIndex], qty, supplier, date: new Date().toLocaleDateString(), processed: true });
+
+            saveData();
+            loadItems();
+            loadReceipts();
+            loadDashboard();
+            this.reset();
+        });
+
+        document.getElementById('dispatchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const itemIndex = document.getElementById('dispatchItem').value;
+            const qty = parseInt(document.getElementById('dispatchQty').value);
+            const outlet = document.getElementById('dispatchOutlet').value;
+
+            if (items[itemIndex].stock >= qty) {
+                items[itemIndex].stock -= qty;
+                dispatches.push({ item: items[itemIndex], qty, outlet, date: new Date().toLocaleDateString(), type: 'Dispatch' });
+                saveData();
+                loadItems();
+                loadDispatches();
+                loadDashboard();
+                this.reset();
+            } else {
+                alert('Insufficient stock!');
+            }
+        });
+
+        function editItem(index) {
+            const item = items[index];
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemStock').value = item.stock;
+            document.getElementById('itemForm').dataset.editIndex = index;
+            showSection('items');
+        }
+
+        function confirmDelete(index) {
+            const modal = document.getElementById('confirmationModal');
+            document.getElementById('modalMessage').textContent = 'Are you sure you want to delete this item?';
+            modal.classList.add('show');
+            document.getElementById('confirmYes').onclick = () => {
+                items.splice(index, 1);
+                saveData();
+                loadItems();
+                loadDashboard();
+                closeModal();
+            };
+        }
+
+        function closeModal() {
+            document.getElementById('confirmationModal').classList.remove('show');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            loadItems();
+            loadReceipts();
+            loadDispatches();
+            loadReports();
+            showSection('dashboard');
+        });
+    </script>
 </body>
 </html>
+</content>
+</create_file>
