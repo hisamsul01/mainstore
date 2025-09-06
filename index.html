@@ -1,645 +1,400 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Warehouse Management System - Hotel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gudang Material Dashboard</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        /* Reset & Basic Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .nav-link {
-            position: relative;
-            transition: all 0.3s ease;
+        body, html {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f8f9fa;
+            color: #444;
+            height: 100vh;
         }
-        .nav-link:hover {
-            color: #2563eb;
-            transform: translateY(-2px);
+        a {
+            text-decoration: none;
+            color: inherit;
         }
-        .nav-link:hover::after {
-            width: 100%;
-        }
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: -8px;
+
+        /* Sidebar Styles */
+        .sidebar {
+            background-color: #4e73df;
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
             left: 0;
-            background-color: #2563eb;
-            transition: width 0.3s ease;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
         }
-        .active::after {
-            width: 100%;
+
+        .sidebar .logo {
+            font-weight: 700;
+            font-size: 22px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding-bottom: 15px;
         }
+
+        .profile {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 0 15px;
+        }
+        .profile img {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            margin-bottom: 8px;
+        }
+        .profile h4 {
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .profile span {
+            font-size: 14px;
+            opacity: 0.8;
+            display: block;
+        }
+
+        .nav-links {
+            flex-grow: 1;
+            padding-left: 15px;
+        }
+        .nav-links h6 {
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            margin: 15px 0 7px 0;
+            text-transform: uppercase;
+            opacity: 0.7;
+            font-weight: 600;
+        }
+
+        .nav-links ul {
+            list-style: none;
+        }
+        .nav-links ul li {
+            margin-bottom: 15px;
+        }
+        .nav-links ul li a {
+            color: #d1d3e2;
+            padding: 10px 12px;
+            display: inline-block;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .nav-links ul li a.active, .nav-links ul li a:hover {
+            background-color: #2e59d9;
+            color: #fff;
+        }
+
+        .sidebar-footer {
+            font-size: 12px;
+            text-align: center;
+            opacity: 0.6;
+            padding: 10px 15px;
+            border-top: 1px solid rgba(255,255,255,0.15);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            padding: 20px 30px;
+            min-height: 100vh;
+            background-color: #fff;
+        }
+
+        .header {
+            color: #4e73df;
+            font-weight: 700;
+            font-size: 28px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Cards Container */
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
         .card {
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            flex: 1 1 120px;
+            background-color: #f8f9fc;
+            border-left: 4px solid #4e73df;
+            padding: 15px 20px;
+            border-radius: 6px;
+            box-shadow: 0 2px 7px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        .card.orange {border-color: #f6c23e;}
+        .card.green {border-color: #1cc88a;}
+        .card.blue {border-color: #36b9cc;}
+
+        .card .title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #858796;
+            margin-bottom: 7px;
         }
-        .section {
-            animation: fadeIn 0.5s ease-in-out;
+
+        .card .value {
+            font-weight: 700;
+            font-size: 22px;
+            color: #4e73df;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .card.orange .value {color: #f6c23e;}
+        .card.green .value {color: #1cc88a;}
+        .card.blue .value {color: #36b9cc;}
+
+        /* Table Styles */
+        .table-wrapper {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+            padding: 25px 30px;
         }
+
+        .table-wrapper h5 {
+            margin-bottom: 20px;
+            font-weight: 700;
+            color: #4e73df;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 14px;
+            color: #5a5c69;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
+
+        thead {
+            background-color: #f8f9fc;
+            border-bottom: 2px solid #e3e6f0;
+        }
+
+        thead th {
+            padding: 12px 15px;
             text-align: left;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: #4e73df;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e3e6f0;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background-color: #e9ecef;
+        }
+
+        tbody td {
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+
+        .status-badge {
+            background-color: #1cc88a;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+            display: inline-block;
+        }
+        .status-badge.orange {
+            background-color: #f6c23e;
+        }
+
+        /* Pagination */
+        .pagination {
+            margin-top: 15px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #858796;
+        }
+        .pagination button {
+            background: none;
+            border: none;
+            font-weight: 600;
+            color: #4e73df;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 5px;
+            border-radius: 3px;
             transition: background-color 0.3s ease;
         }
-        th {
-            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
-            color: white;
-            font-weight: bold;
+        .pagination button:hover {
+            background-color: #e3e6f0;
         }
-        tbody tr:hover {
-            background-color: #e3f2fd;
-        }
-        .notification {
-            background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
-            border-left: 4px solid #f59e0b;
-            color: #92400e;
-            padding: 12px 16px;
-            margin: 10px 0;
-            border-radius: 8px;
-            animation: slideIn 0.5s ease;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(-100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        .search-input {
-            border-radius: 8px;
-            padding: 8px 12px;
-            border: 2px solid #e5e7eb;
-            transition: border-color 0.3s ease;
-        }
-        .search-input:focus {
-            border-color: #2563eb;
-            outline: none;
-        }
-        .btn-primary {
-            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-        .btn-danger {
-            background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 50;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal.show {
-            display: flex;
-        }
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 400px;
-            width: 90%;
-        }
-        @media (max-width: 768px) {
-            .nav-links {
+
+        /* Responsive - small devices */
+        @media(max-width: 768px){
+            .sidebar {
+                width: 60px;
+                padding: 20px 5px;
+            }
+            .sidebar .logo, .profile h4, .profile span, .nav-links h6, .nav-links ul li a {
+                display: none;
+            }
+            .sidebar .profile img {
+                margin: 0 auto 20px auto;
+            }
+            .main-content {
+                margin-left: 60px;
+                padding: 20px 15px;
+            }
+            .cards {
                 flex-direction: column;
-                align-items: stretch;
             }
-            .nav-link {
-                padding: 15px;
-                text-align: center;
+            .card {
+                width: 100%;
+                flex: none;
             }
-            .chart-container {
-                height: 300px !important;
-            }
-        }
-        .chart-container {
-            height: 250px;
         }
     </style>
 </head>
-<body class="text-gray-800 min-h-screen flex flex-col">
-    <nav class="bg-white/80 backdrop-blur-md shadow-lg fixed top-0 left-0 right-0 z-10">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="text-2xl font-bold text-gray-800 flex items-center">
-                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/f3f0a826-e80a-49ac-9477-55d7357a1f46.png" alt="Icon depicting a modern warehouse facility with automated forklifts moving stacks of products in a clean, organized environment" class="inline mr-3 rounded-full" width="40" height="40" />
-                Warehouse Management
-            </div>
-            <div class="nav-links flex space-x-6 text-gray-600">
-                <a href="#dashboard" class="nav-link px-4 py-2 cursor-pointer active" onclick="showSection('dashboard')">Dashboard</a>
-                <a href="#items" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('items')">Items</a>
-                <a href="#receive" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('receive')">Receive Goods</a>
-                <a href="#dispatch" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('dispatch')">Dispatch to Outlets</a>
-                <a href="#reports" class="nav-link px-4 py-2 cursor-pointer" onclick="showSection('reports')">Reports</a>
-            </div>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">Gudang Material</div>
+        <div class="profile">
+            <img src="https://i.pravatar.cc/55" alt="Avatar" />
+            <h4>Andre Setiawan</h4>
+            <span>Administrator</span>
         </div>
-    </nav>
-
-    <div class="mt-20 flex-1">
-        <div id="dashboard" class="section container mx-auto px-4 py-8">
-            <h1 class="text-4xl font-bold text-gray-800 mb-6 text-center">Dashboard Overview</h1>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="card bg-white p-6 rounded-xl">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
-                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/6d37e4d3-9b57-4554-8879-0b2c702d06d2.png" alt="Small icon of a package indicating total stock" class="mr-2" />
-                        Total Items in Stock
-                    </h2>
-                    <p id="totalStock" class="text-3xl font-bold text-blue-600">0</p>
-                </div>
-                <div class="card bg-white p-6 rounded-xl">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
-                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b89feb9e-efea-4e0c-af7e-cfbc4001a465.png" alt="Small icon of a receipt indicating pending receipts" class="mr-2" />
-                        Pending Receipts
-                    </h2>
-                    <p id="pendingReceipts" class="text-3xl font-bold text-yellow-600">0</p>
-                </div>
-                <div class="card bg-white p-6 rounded-xl">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
-                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/f74e4945-7d5a-405f-b83e-1067720aa427.png" alt="Small icon of a truck indicating today's dispatches" class="mr-2" />
-                        Today's Dispatches
-                    </h2>
-                    <p id="todayDispatches" class="text-3xl font-bold text-green-600">0</p>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div class="card bg-white p-6 rounded-xl">
-                    <h3 class="text-lg font-semibold mb-4">Stock Levels Chart</h3>
-                    <canvas id="stockChart" class="chart-container"></canvas>
-                </div>
-                <div class="card bg-white p-6 rounded-xl">
-                    <h3 class="text-lg font-semibold mb-4">Recent Activities</h3>
-                    <ul id="activityList" class="space-y-2">
-                        <!-- Dynamically populated -->
-                    </ul>
-                </div>
-            </div>
-            <div id="notifications" class="mb-8"></div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Quick Actions</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
-                <button onclick="showSection('receive')" class="btn-primary text-center">Receive New Goods</button>
-                <button onclick="showSection('dispatch')" class="btn-primary text-center bg-green-600 hover:bg-green-700">Dispatch to Outlet</button>
-            </div>
+        <nav class="nav-links">
+            <h6>Dashboard</h6>
+            <ul>
+                <li><a href="#" class="active">Dashboard</a></li>
+            </ul>
+            <h6>Master</h6>
+            <ul>
+                <li><a href="#">Item</a></li>
+            </ul>
+            <h6>Transaksi</h6>
+            <ul>
+                <li><a href="#">Barang Masuk</a></li>
+                <li><a href="#">Barang Keluar</a></li>
+            </ul>
+            <h6>Laporan</h6>
+            <ul>
+                <li><a href="#">Laporan Stok</a></li>
+                <li><a href="#">Laporan Barang Masuk</a></li>
+                <li><a href="#">Laporan Barang Keluar</a></li>
+            </ul>
+            <h6>Pengaturan</h6>
+            <ul>
+                <li><a href="#">Manajemen User</a></li>
+            </ul>
+            <h6>Bantuan</h6>
+            <ul>
+                <li><a href="#">...</a></li>
+            </ul>
+        </nav>
+        <div class="sidebar-footer">
+            Copyright &copy; 2021 - Gudang Material
         </div>
+    </aside>
 
-        <div id="items" class="section container mx-auto px-4 py-8 hidden">
-            <h1 class="text-4xl font-bold text-gray-800 mb-6">Manage Items</h1>
-            <form id="itemForm" class="card bg-white p-6 rounded-xl mb-6">
-                <h2 class="text-xl font-semibold mb-4">Add/Edit Item</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <input type="text" id="itemName" placeholder="Item Name" class="border p-3 rounded-lg" required>
-                    <input type="text" id="itemCategory" placeholder="Category" class="border p-3 rounded-lg">
-                    <input type="number" id="itemStock" placeholder="Initial Stock" class="border p-3 rounded-lg" required>
-                </div>
-                <button type="submit" class="btn-primary">Save Item</button>
-            </form>
-            <div class="card bg-white p-6 rounded-xl">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-semibold">Item List</h2>
-                    <input type="text" id="itemSearch" class="search-input" placeholder="Search items...">
-                </div>
-                <table id="itemTable" class="mb-4">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>Stock</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+    <main class="main-content">
+        <header class="header">
+            <h1>Dashboard</h1>
+            <!-- You can add user icon or settings here -->
+        </header>
+
+        <section class="cards">
+            <div class="card">
+                <div class="title">Data Gudang</div>
+                <div class="value">10</div>
             </div>
-        </div>
-
-        <div id="receive" class="section container mx-auto px-4 py-8 hidden">
-            <h1 class="text-4xl font-bold text-gray-800 mb-6">Receive Goods</h1>
-            <form id="receiveForm" class="card bg-white p-6 rounded-xl mb-6">
-                <h2 class="text-xl font-semibold mb-4">Record Receipt</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <select id="receiveItem" class="border p-3 rounded-lg">
-                        <option value="">Select Item</option>
-                    </select>
-                    <input type="number" id="receiveQty" placeholder="Quantity" class="border p-3 rounded-lg" required>
-                    <input type="text" id="receiveSupplier" placeholder="Supplier" class="border p-3 rounded-lg">
-                </div>
-                <button type="submit" class="btn-primary">Receive Goods</button>
-            </form>
-            <div class="card bg-white p-6 rounded-xl">
-                <h2 class="text-xl font-semibold mb-4">Receipt History</h2>
-                <table id="receiptTable">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Quantity</th>
-                            <th>Supplier</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="card green">
+                <div class="title">Data Barang Masuk</div>
+                <div class="value">11</div>
             </div>
-        </div>
-
-        <div id="dispatch" class="section container mx-auto px-4 py-8 hidden">
-            <h1 class="text-4xl font-bold text-gray-800 mb-6">Dispatch to Outlets</h1>
-            <form id="dispatchForm" class="card bg-white p-6 rounded-xl mb-6">
-                <h2 class="text-xl font-semibold mb-4">Record Dispatch</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <select id="dispatchItem" class="border p-3 rounded-lg">
-                        <option value="">Select Item</option>
-                    </select>
-                    <input type="number" id="dispatchQty" placeholder="Quantity" class="border p-3 rounded-lg" required>
-                    <select id="dispatchOutlet" class="border p-3 rounded-lg">
-                        <option value="">Select Outlet</option>
-                        <option value="Restaurant">Restaurant</option>
-                        <option value="Bar">Bar</option>
-                        <option value="Room Service">Room Service</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-primary">Dispatch Goods</button>
-            </form>
-            <div class="card bg-white p-6 rounded-xl">
-                <h2 class="text-xl font-semibold mb-4">Dispatch History</h2>
-                <table id="dispatchTable">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Quantity</th>
-                            <th>Outlet</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="card orange">
+                <div class="title">Data Barang Keluar</div>
+                <div class="value">14</div>
             </div>
-        </div>
-
-        <div id="reports" class="section container mx-auto px-4 py-8 hidden">
-            <h1 class="text-4xl font-bold text-gray-800 mb-6">Reports</h1>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="card bg-white p-6 rounded-xl">
-                    <h2 class="text-xl font-semibold mb-4">Stock Report</h2>
-                    <table id="stockReport">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Stock</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div class="card bg-white p-6 rounded-xl">
-                    <h2 class="text-xl font-semibold mb-4">Recent Activities</h2>
-                    <table id="activityReport">
-                        <thead>
-                            <tr>
-                                <th>Type</th>
-                                <th>Item</th>
-                                <th>Quantity</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+            <div class="card orange">
+                <div class="title">Data Kategori Barang</div>
+                <div class="value">14</div>
             </div>
-        </div>
-    </div>
+            <div class="card blue">
+                <div class="title">Data Supplier</div>
+                <div class="value">10</div>
+            </div>
+            <div class="card green">
+                <div class="title">Profil</div>
+                <div class="value">3</div>
+            </div>
+        </section>
 
-    <footer class="bg-gray-800 text-white py-6 mt-12">
-        <div class="container mx-auto px-4 text-center">
-            <p class="text-sm">© 2024 Warehouse Management System for Hotels. Crafted for efficiency and professionalism.</p>
-            <p class="text-xs mt-2 flex justify-center items-center">
-                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/160aa0a3-0dcf-484a-a6a8-5589f8baca5d.png" alt="Small icon of a shield representing security and reliability" class="mr-2" />
-                Secure & Reliable | Powered by Modern Web Technology
-            </p>
-        </div>
-    </footer>
+        <section class="table-wrapper">
+            <h5>Stock barang telah mencapai batas minimum</h5>
 
-    <!-- Modal for Confirmations -->
-    <div id="confirmationModal" class="modal">
-        <div class="modal-content">
-            <h3 class="text-xl font-semibold mb-4">Confirm Action</h3>
-            <p id="modalMessage" class="mb-4">Are you sure you want to proceed?</p>
-            <button id="confirmYes" class="btn-danger mr-2">Yes</button>
-            <button onclick="closeModal()" class="btn-primary">No</button>
-        </div>
-    </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>ID Barang</th>
+                        <th>Nama Barang</th>
+                        <th>Jenis Barang</th>
+                        <th>Stok</th>
+                        <th>Satuan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>10001</td>
+                        <td>Cat tembok 10L</td>
+                        <td>Material</td>
+                        <td><span class="status-badge orange">5</span></td>
+                        <td>Liter</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>10003</td>
+                        <td>Amplas Cat</td>
+                        <td>Bahan Kimia Penghilang</td>
+                        <td><span class="status-badge orange">7</span></td>
+                        <td>Liter</td>
+                    </tr>
+                </tbody>
+            </table>
 
-    <script>
-        const sections = ['dashboard', 'items', 'receive', 'dispatch', 'reports'];
-        let currentSection = 'dashboard';
-        let stockChart;
-
-        function showSection(sectionId) {
-            document.getElementById(currentSection).classList.add('hidden');
-            document.getElementById(sectionId).classList.remove('hidden');
-            currentSection = sectionId;
-            updateActiveNav();
-        }
-
-        function updateActiveNav() {
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-            });
-            document.querySelector(`[onclick="showSection('${currentSection}')"]`).classList.add('active');
-        }
-
-        let items = JSON.parse(localStorage.getItem('items')) || [
-            { name: 'Rice', category: 'Food', stock: 100 },
-            { name: 'Chicken', category: 'Meat', stock: 50 },
-            { name: 'Beer', category: 'Beverage', stock: 200 }
-        ];
-
-        let receipts = JSON.parse(localStorage.getItem('receipts')) || [];
-        let dispatches = JSON.parse(localStorage.getItem('dispatches')) || [];
-
-        function saveData() {
-            localStorage.setItem('items', JSON.stringify(items));
-            localStorage.setItem('receipts', JSON.stringify(receipts));
-            localStorage.setItem('dispatches', JSON.stringify(dispatches));
-        }
-
-        function loadDashboard() {
-            document.getElementById('totalStock').textContent = items.reduce((sum, item) => sum + item.stock, 0);
-            document.getElementById('pendingReceipts').textContent = receipts.filter(r => !r.processed).length;
-            document.getElementById('todayDispatches').textContent = dispatches.filter(d => new Date(d.date).toDateString() === new Date().toDateString()).length;
-
-            const ctx = document.getElementById('stockChart').getContext('2d');
-            if (stockChart) stockChart.destroy();
-            stockChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: items.map(item => item.name),
-                    datasets: [{
-                        label: 'Stock Levels',
-                        data: items.map(item => item.stock),
-                        backgroundColor: 'rgba(37, 99, 235, 0.6)',
-                        borderColor: 'rgba(37, 99, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-
-            const activityList = document.getElementById('activityList');
-            activityList.innerHTML = '';
-            [...receipts.slice(-5), ...dispatches.slice(-5)].forEach(activity => {
-                const li = document.createElement('li');
-                li.className = 'flex items-center space-x-2';
-                li.innerHTML = `
-                    <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    <span>${activity.type || 'Receipt'}: ${activity.item ? activity.item.name : ''} (${activity.qty}) on ${activity.date}</span>
-                `;
-                activityList.appendChild(li);
-            });
-
-            const lowStock = items.filter(item => item.stock < 20).map(item => `${item.name} has low stock (${item.stock})`);
-            const notifications = document.getElementById('notifications');
-            notifications.innerHTML = '';
-            if (lowStock.length > 0) {
-                lowStock.forEach(note => {
-                    const div = document.createElement('div');
-                    div.className = 'notification';
-                    div.textContent = 'Alert: ' + note;
-                    notifications.appendChild(div);
-                });
-            }
-        }
-
-        function loadItems() {
-            const tbody = document.querySelector('#itemTable tbody');
-            tbody.innerHTML = '';
-            items.forEach((item, index) => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${item.name}</td>
-                    <td>${item.category}</td>
-                    <td>${item.stock}</td>
-                    <td>
-                        <button onclick="editItem(${index})" class="btn-primary text-sm mr-2" title="Edit Item">Edit</button>
-                        <button onclick="confirmDelete(${index})" class="btn-danger text-sm" title="Delete Item">Delete</button>
-                    </td>
-                `;
-            });
-
-            const itemSelects = ['receiveItem', 'dispatchItem'];
-            itemSelects.forEach(id => {
-                const select = document.getElementById(id);
-                select.innerHTML = '<option value="">Select Item</option>';
-                items.forEach((item, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = item.name;
-                    select.appendChild(option);
-                });
-            });
-        }
-
-        function loadReceipts() {
-            const tbody = document.querySelector('#receiptTable tbody');
-            tbody.innerHTML = '';
-            receipts.forEach(receipt => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${receipt.item.name}</td>
-                    <td>${receipt.qty}</td>
-                    <td>${receipt.supplier}</td>
-                    <td>${receipt.date}</td>
-                `;
-            });
-        }
-
-        function loadDispatches() {
-            const tbody = document.querySelector('#dispatchTable tbody');
-            tbody.innerHTML = '';
-            dispatches.forEach(dispatch => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${dispatch.item.name}</td>
-                    <td>${dispatch.qty}</td>
-                    <td>${dispatch.outlet}</td>
-                    <td>${dispatch.date}</td>
-                `;
-            });
-        }
-
-        function loadReports() {
-            const stockTbody = document.querySelector('#stockReport tbody');
-            stockTbody.innerHTML = '';
-            items.forEach(item => {
-                const row = stockTbody.insertRow();
-                row.innerHTML = `
-                    <td>${item.name}</td>
-                    <td>${item.stock}</td>
-                `;
-            });
-
-            const activityTbody = document.querySelector('#activityReport tbody');
-            activityTbody.innerHTML = '';
-            [...receipts.slice(-5), ...dispatches.slice(-5)].forEach(activity => {
-                const row = activityTbody.insertRow();
-                row.innerHTML = `
-                    <td>${activity.type || 'Receipt'}</td>
-                    <td>${activity.item ? activity.item.name : ''}</td>
-                    <td>${activity.qty}</td>
-                    <td>${activity.date}</td>
-                `;
-            });
-        }
-
-        // Search functionality
-        document.getElementById('itemSearch').addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#itemTable tbody tr');
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
-            });
-        });
-
-        // Form submissions
-        document.getElementById('itemForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('itemName').value;
-            const category = document.getElementById('itemCategory').value;
-            const stock = parseInt(document.getElementById('itemStock').value);
-
-            if (document.getElementById('itemForm').dataset.editIndex) {
-                const index = parseInt(document.getElementById('itemForm').dataset.editIndex);
-                items[index] = { ...items[index], name, category, stock };
-                delete document.getElementById('itemForm').dataset.editIndex;
-            } else {
-                items.push({ name, category, stock });
-            }
-
-            saveData();
-            loadItems();
-            loadDashboard();
-            this.reset();
-            showSection('items');
-        });
-
-        document.getElementById('receiveForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const itemIndex = document.getElementById('receiveItem').value;
-            const qty = parseInt(document.getElementById('receiveQty').value);
-            const supplier = document.getElementById('receiveSupplier').value;
-
-            items[itemIndex].stock += qty;
-            receipts.push({ item: items[itemIndex], qty, supplier, date: new Date().toLocaleDateString(), processed: true });
-
-            saveData();
-            loadItems();
-            loadReceipts();
-            loadDashboard();
-            this.reset();
-        });
-
-        document.getElementById('dispatchForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const itemIndex = document.getElementById('dispatchItem').value;
-            const qty = parseInt(document.getElementById('dispatchQty').value);
-            const outlet = document.getElementById('dispatchOutlet').value;
-
-            if (items[itemIndex].stock >= qty) {
-                items[itemIndex].stock -= qty;
-                dispatches.push({ item: items[itemIndex], qty, outlet, date: new Date().toLocaleDateString(), type: 'Dispatch' });
-                saveData();
-                loadItems();
-                loadDispatches();
-                loadDashboard();
-                this.reset();
-            } else {
-                alert('Insufficient stock!');
-            }
-        });
-
-        function editItem(index) {
-            const item = items[index];
-            document.getElementById('itemName').value = item.name;
-            document.getElementById('itemCategory').value = item.category;
-            document.getElementById('itemStock').value = item.stock;
-            document.getElementById('itemForm').dataset.editIndex = index;
-            showSection('items');
-        }
-
-        function confirmDelete(index) {
-            const modal = document.getElementById('confirmationModal');
-            document.getElementById('modalMessage').textContent = 'Are you sure you want to delete this item?';
-            modal.classList.add('show');
-            document.getElementById('confirmYes').onclick = () => {
-                items.splice(index, 1);
-                saveData();
-                loadItems();
-                loadDashboard();
-                closeModal();
-            };
-        }
-
-        function closeModal() {
-            document.getElementById('confirmationModal').classList.remove('show');
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDashboard();
-            loadItems();
-            loadReceipts();
-            loadDispatches();
-            loadReports();
-            showSection('dashboard');
-        });
-    </script>
+            <div class="pagination">
+                <span>Menampilkan 1 sampai 2 dari 2 data</span>
+                <button disabled>&laquo;</button>
+                <button disabled>&raquo;</button>
+            </div>
+        </section>
+    </main>
 </body>
 </html>
-</content>
-</create_file>
