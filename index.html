@@ -3,783 +3,476 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Warehouse Manager</title>
-<link rel="icon" href="data:;base64,iVBORw0KGgo=">
+<title>Warehouse Manager — Single File</title>
 <style>
   :root{
-    --primary:#4e73df; --accent:#2e59d9; --bg:#f6f7fb; --card:#fff; --muted:#6b7280;
-    --ok:#1cc88a; --warn:#f6c23e; --danger:#e74a3b; --glass: rgba(255,255,255,0.6);
-    --shadow: 0 8px 24px rgba(15,23,42,0.06);
-    --radius:12px;
+    --primary:#4e73df; --ok:#1cc88a; --warn:#f6c23e; --danger:#e74a3b;
+    --bg:#f6f7fb; --card:#fff; --muted:#64748b; --radius:12px; --shadow:0 8px 20px rgba(2,6,23,0.06);
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; background:var(--bg); color:#111; -webkit-font-smoothing:antialiased}
-  a{text-decoration:none;color:inherit}
-
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:#0f1724}
+  a{color:inherit;text-decoration:none}
   /* Topbar */
-  .topbar{position:sticky;top:0;z-index:50;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #eef2f6;box-shadow:0 2px 6px rgba(16,24,40,0.03)}
-  .brand{display:flex;gap:10px;align-items:center;color:var(--primary);font-weight:800;font-size:20px}
-  .brand .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#7c9af5)}
-  .top-actions{display:flex;gap:8px;align-items:center}
-
-  button,select,input,textarea{font:inherit}
-  .btn{background:var(--primary);color:#fff;border:0;padding:8px 12px;border-radius:10px;cursor:pointer;box-shadow: none}
+  .topbar{position:sticky;top:0;z-index:60;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #eef2f6}
+  .brand{display:flex;gap:10px;align-items:center;color:var(--primary);font-weight:800}
+  .controls{display:flex;gap:8px;align-items:center}
+  .btn{border:0;padding:8px 12px;border-radius:10px;background:var(--primary);color:#fff;cursor:pointer}
   .btn.ghost{background:transparent;border:1px solid var(--primary);color:var(--primary)}
-  .btn.secondary{background:#6b7280}
-  .control{padding:8px 10px;border:1px solid #e6e9f2;border-radius:10px;background:#fff}
+  .control{padding:7px 10px;border-radius:8px;border:1px solid #e6eefc;background:#fff}
 
-  /* Layout */
-  .app{display:grid;grid-template-columns:1fr;min-height:calc(100vh - 64px)}
-  .sidebar{position:fixed;left:0;top:64px;bottom:0;width:260px;background:#16203b;color:#e8eefc;padding:18px;transform:translateX(-120%);transition:transform .28s ease;z-index:40;overflow:auto}
-  .sidebar.show{transform:none}
-  .sidebar .logoText{font-weight:800;margin-bottom:8px}
-  .nav h6{font-size:12px;color:#9fb1ff;margin:14px 0 8px;text-transform:uppercase;letter-spacing:1px}
+  /* Sidebar */
+  .sidebar{position:fixed;left:-260px;top:64px;bottom:0;width:260px;background:#13203d;color:#eaf0ff;padding:18px;transition:left .28s ease;z-index:70;overflow:auto}
+  .sidebar.show{left:0}
+  .nav h6{font-size:12px;color:#94b0ff;margin:12px 0;text-transform:uppercase;letter-spacing:.08em}
   .nav ul{list-style:none;padding:0;margin:0}
   .nav li{margin-bottom:6px}
-  .nav a{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;color:rgba(232,238,252,0.95)}
-  .nav a:hover,.nav a.active{background:#1f2f5d}
+  .nav a{display:block;padding:10px;border-radius:8px;color:rgba(234,240,255,0.95)}
+  .nav a:hover,.nav a.active{background:#20355f}
+  .submenu{display:none;padding-left:12px;margin-top:6px}
+  .open>.submenu{display:block}
 
-  .main{margin-left:0;padding:18px;transition:margin-left .28s ease}
+  /* main */
+  .main{transition:margin-left .28s ease;padding:18px}
   .sidebar.show ~ .main{margin-left:260px}
+  @media(min-width:900px){ .sidebar{left:0} .main{margin-left:260px} .menu-toggle{display:none} }
 
-  /* Cards */
-  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
-  .card{background:var(--card);padding:14px;border-radius:var(--radius);box-shadow:var(--shadow)}
+  /* UI */
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
+  .card{background:var(--card);padding:12px;border-radius:var(--radius);box-shadow:var(--shadow)}
   .card .label{color:var(--muted);font-size:13px}
-  .card .value{font-weight:800;font-size:24px;color:var(--primary)}
+  .card .value{font-weight:800;color:var(--primary);font-size:20px}
 
-  /* Panels & forms */
-  .panel{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin-bottom:12px}
+  .panel{background:var(--card);border-radius:var(--radius);padding:12px;margin-bottom:12px;box-shadow:var(--shadow)}
   .grid-2{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:780px){ .cards{grid-template-columns:repeat(4,1fr)} .grid-2{grid-template-columns:1fr 1fr} }
   .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:13px;color:var(--muted)}
-  .field input,.field select,textarea{padding:9px;border-radius:8px;border:1px solid #e6e9f2;background:#fff}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
+  input,select,textarea{padding:9px;border-radius:8px;border:1px solid #e6eefc;background:#fff}
 
-  /* Table */
   .table-wrap{overflow:auto;border-radius:8px;border:1px solid #eef2f6}
   table{width:100%;border-collapse:collapse;min-width:720px}
-  thead th{background:#fbfdff;color:var(--primary);text-align:left;padding:10px;border-bottom:1px solid #eef2f6;font-weight:700;position:sticky;top:0}
-  tbody td{padding:10px;border-bottom:1px solid #f3f6fb;vertical-align:middle}
-  tbody tr:hover{background:#f7fbff;cursor:pointer}
-  .badge{display:inline-block;padding:5px 10px;border-radius:999px;color:#fff;font-weight:700;font-size:13px}
+  thead th{background:#fbfdff;color:var(--primary);padding:10px;text-align:left;position:sticky;top:0}
+  tbody td{padding:10px;border-bottom:1px solid #f3f6fb}
+  tbody tr:hover{background:#f7fbff}
+
+  .badge{display:inline-block;padding:5px 10px;border-radius:999px;color:#fff;font-weight:700}
   .b-ok{background:var(--ok)}.b-warn{background:var(--warn)}.b-danger{background:var(--danger)}
 
   .tools{display:flex;gap:8px;align-items:center}
-
-  /* small utilities */
-  .muted{color:var(--muted);font-size:13px}
   .right{margin-left:auto}
+  .muted{color:var(--muted)}
   .hidden{display:none!important}
 
   /* modal */
-  .modal-back{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:60}
-  .modal{background:var(--card);padding:16px;border-radius:12px;min-width:320px;max-width:720px;box-shadow:var(--shadow)}
-  .modal h4{margin:0 0 8px}
+  .modal-back{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:90}
+  .modal{background:#fff;padding:14px;border-radius:10px;max-width:720px;width:92%;box-shadow:var(--shadow)}
 
-  /* responsive */
-  @media(min-width:780px){
-    .cards{grid-template-columns:repeat(4,1fr)}
-    .grid-2{grid-template-columns:1fr 1fr}
-  }
-  @media(min-width:1100px){
-    .cards{grid-template-columns:repeat(6,1fr)}
-  }
-  @media(max-width:779px){
-    .sidebar{top:56px}
-    .topbar{padding:8px 12px}
-    .brand{font-size:18px}
-    table{min-width:640px}
-  }
-  @media print{
-    .topbar,.sidebar,.btn,.tools,.cards{display:none}
-    body{background:#fff}
-    .panel{box-shadow:none;border:0}
-    table{min-width:0}
-  }
+  @media(max-width:640px){ table{min-width:600px} .cards{grid-template-columns:repeat(2,1fr)} }
+  @media print{ .topbar,.sidebar,.btn,.cards{display:none} table{min-width:0} }
 </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><div class="logo"></div>Warehouse Manager</div>
-    <div class="top-actions">
-      <select id="lang" class="control" title="Bahasa">
-        <option value="id">Indonesia</option>
-        <option value="en">English</option>
-      </select>
-      <div id="currentUser" class="muted" style="min-width:120px;text-align:right"></div>
-      <button id="toggleSidebar" class="btn ghost" title="Menu">☰</button>
-    </div>
-  </header>
 
-  <aside class="sidebar" id="sidebar">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px"><div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#7c9af5)"></div><div class="logoText">Warehouse</div></div>
-    <nav class="nav">
-      <h6>Navigation</h6>
-      <ul id="navList">
-        <li><a href="#dashboard" data-view="dashboard" class="active">Dashboard</a></li>
+<header class="topbar">
+  <div class="brand"><div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#7c9af5)"></div>Warehouse Manager</div>
+  <div class="controls">
+    <select id="lang" class="control"><option value="id">Indonesia</option><option value="en">English</option></select>
+    <div id="currentUser" class="muted">admin</div>
+    <button id="menuToggle" class="btn ghost menu-toggle">☰</button>
+  </div>
+</header>
 
-        <li>
-          <a data-toggle="sub">Operasional ▾</a>
-          <ul class="submenu">
-            <li><a href="#receipt" data-view="receipt">Penerimaan Barang</a></li>
-            <li><a href="#transfer" data-view="transfer">Transfer ke Outlet</a></li>
-          </ul>
-        </li>
-
-        <li>
-          <a data-toggle="sub">Master Data ▾</a>
-          <ul class="submenu">
-            <li><a href="#items" data-view="items">Master Barang</a></li>
-            <li><a href="#outlets" data-view="outlets">Outlet</a></li>
-          </ul>
-        </li>
-
-        <li><a href="#reports" data-view="reports">Laporan</a></li>
-        <li><a href="#settings" data-view="settings">Pengaturan</a></li>
-      </ul>
-    </nav>
-
-    <div style="margin-top:18px;font-size:13px;color:#97a7db">© <span id="year"></span> Warehouse</div>
-  </aside>
-
-  <main class="main">
-    <div class="main" id="mainContent" style="padding:18px">
-
-      <!-- DASHBOARD -->
-      <section id="view-dashboard" class="view">
-        <div class="cards" id="widgets">
-          <div class="card"><div class="label">Jenis Barang</div><div class="value" id="wItems">0</div></div>
-          <div class="card"><div class="label">Total Stok</div><div class="value" id="wStock">0</div></div>
-          <div class="card"><div class="label">Total Penerimaan</div><div class="value" id="wReceipts">0</div></div>
-          <div class="card"><div class="label">Total Transfer</div><div class="value" id="wTransfers">0</div></div>
-          <div class="card"><div class="label">Jumlah Outlet</div><div class="value" id="wOutlets">0</div></div>
-          <div class="card"><div class="label">Pengguna</div><div class="value" id="wUsers">1</div></div>
-        </div>
-
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Aksi Cepat</h3>
-          <div class="tools">
-            <button class="btn" onclick="showView('receipt')">Penerimaan</button>
-            <button class="btn" onclick="showView('transfer')">Transfer</button>
-            <button class="btn ghost" onclick="showView('items')">Master Barang</button>
-            <button class="btn ghost" onclick="showView('reports')">Laporan</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- PENERIMAAN BARANG -->
-      <section id="view-receipt" class="view hidden">
-        <div class="panel">
-          <h3 style="margin:0 0 10px">Penerimaan Barang</h3>
-          <div class="grid-2">
-            <div class="field"><label>Kode Penerimaan (kode barang)</label><input id="rcpCode" placeholder="BRG-001"></div>
-            <div class="field"><label>Nama Barang</label><input id="rcpName" placeholder="Cat Tembok 10L"></div>
-            <div class="field"><label>Kuantitas</label><input id="rcpQty" type="number" min="1" value="1"></div>
-            <div class="field" style="align-self:end"><button class="btn" onclick="addReceipt()">Tambah Penerimaan</button></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Daftar Inventori</h3>
-          <div class="table-wrap">
-            <table id="tblInventory">
-              <thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Aksi</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- TRANSFER -->
-      <section id="view-transfer" class="view hidden">
-        <div class="panel">
-          <h3 style="margin:0 0 10px">Transfer ke Outlet</h3>
-          <div class="grid-2">
-            <div class="field"><label>Kode Barang</label><input id="trfCode" placeholder="BRG-001"></div>
-            <div class="field"><label>Nama Barang</label><input id="trfName" placeholder="Cat Tembok 10L"></div>
-            <div class="field"><label>Kuantitas</label><input id="trfQty" type="number" min="1" value="1"></div>
-            <div class="field"><label>Pilih Outlet</label><select id="trfOutlet"></select></div>
-            <div class="field" style="align-self:end"><button class="btn" onclick="addTransfer()">Transfer</button></div>
-          </div>
-          <div id="trfMsg" class="muted" style="margin-top:8px"></div>
-        </div>
-
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Riwayat Transfer</h3>
-          <div class="table-wrap">
-            <table id="tblTransfers">
-              <thead><tr><th>No</th><th>Tanggal</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Outlet</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- MASTER BARANG -->
-      <section id="view-items" class="view hidden">
-        <div class="panel">
-          <h3 style="margin:0 0 10px">Master Data Barang</h3>
-          <div class="row" style="gap:8px">
-            <div class="field" style="flex:1"><label>Kode Barang</label><input id="itCode" placeholder="BRG-001"></div>
-            <div class="field" style="flex:2"><label>Nama Barang</label><input id="itName" placeholder="Nama barang"></div>
-            <div style="align-self:end"><button class="btn" onclick="addItem()">Tambah Barang</button></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Daftar Barang</h3>
-          <div class="table-wrap">
-            <table id="tblItems">
-              <thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Aksi</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- OUTLET -->
-      <section id="view-outlets" class="view hidden">
-        <div class="panel">
-          <h3 style="margin:0 0 10px">Outlet</h3>
-          <div class="row" style="gap:8px">
-            <div class="field" style="flex:1"><label>Kode Outlet</label><input id="outCode" placeholder="OT-01"></div>
-            <div class="field" style="flex:2"><label>Nama Outlet</label><input id="outName" placeholder="Nama outlet"></div>
-            <div style="align-self:end"><button class="btn" onclick="addOutlet()">Tambah Outlet</button></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Daftar Outlet</h3>
-          <div class="table-wrap">
-            <table id="tblOutlets">
-              <thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Aksi</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- REPORTS -->
-      <section id="view-reports" class="view hidden">
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Laporan Transaksi</h3>
-          <div class="row" style="align-items:center">
-            <div class="field" style="flex:1"><label>Jenis</label>
-              <select id="repType" class="control">
-                <option value="all">Semua</option>
-                <option value="receipt">Penerimaan</option>
-                <option value="transfer">Transfer</option>
-              </select>
-            </div>
-            <div class="field" style="flex:2"><label>Pencarian</label><input id="repSearch" placeholder="Cari kode, nama, outlet..."></div>
-            <div class="right tools">
-              <button class="btn ghost" onclick="exportCSV()">Export CSV</button>
-              <button class="btn" onclick="window.print()">Print to PDF</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="table-wrap">
-            <table id="tblReports">
-              <thead><tr><th>No</th><th>Tanggal</th><th>Jenis</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Outlet</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Ringkasan Pengeluaran ke Outlet</h3>
-          <div class="table-wrap">
-            <table id="tblExpenses">
-              <thead><tr><th>Outlet</th><th>Total Qty</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- SETTINGS -->
-      <section id="view-settings" class="view hidden">
-        <div class="panel">
-          <h3 style="margin:0 0 8px">Pengaturan</h3>
-          <div class="grid-2">
-            <div class="field"><label>Username</label><input id="setUser" placeholder="admin"></div>
-            <div class="field"><label>Password</label><input id="setPass" type="password" placeholder="••••••"></div>
-            <div class="row" style="align-items:center">
-              <input type="checkbox" id="setWidgets" style="width:18px;height:18px;margin-right:8px"><label for="setWidgets">Tampilkan Widget Dashboard</label>
-            </div>
-            <div style="display:flex;align-items:flex-end"><button class="btn" onclick="saveSettings()">Simpan</button></div>
-          </div>
-          <div id="saveNote" class="muted" style="margin-top:8px"></div>
-        </div>
-      </section>
-
-    </div>
-  </main>
-
-  <!-- Modal Edit Item / Outlet -->
-  <div id="modalEdit" class="modal-back hidden" role="dialog">
-    <div class="modal">
-      <h4 id="modalTitle">Edit</h4>
-      <div id="modalBody"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-        <button class="btn ghost" onclick="closeModal()">Batal</button>
-        <button class="btn" id="modalSave">Simpan</button>
-      </div>
-    </div>
+<aside class="sidebar" id="sidebar">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#7c9af5)"></div>
+    <div style="font-weight:800">Warehouse</div>
   </div>
 
+  <nav class="nav">
+    <h6>Navigation</h6>
+    <ul id="navList">
+      <li><a href="#dashboard" data-view="dashboard" class="active">Dashboard</a></li>
+
+      <li>
+        <a href="#" data-toggle="sub">Operasional ▾</a>
+        <div class="submenu">
+          <a href="#receipt" data-view="receipt">Penerimaan Barang</a>
+          <a href="#transfer" data-view="transfer">Transfer ke Outlet</a>
+        </div>
+      </li>
+
+      <li>
+        <a href="#" data-toggle="sub">Master Data ▾</a>
+        <div class="submenu">
+          <a href="#items" data-view="items">Master Barang</a>
+          <a href="#outlets" data-view="outlets">Outlet</a>
+        </div>
+      </li>
+
+      <li><a href="#reports" data-view="reports">Laporan</a></li>
+      <li><a href="#settings" data-view="settings">Pengaturan</a></li>
+    </ul>
+  </nav>
+  <div style="margin-top:18px;font-size:13px;color:#94b0ff">© <span id="year"></span> Warehouse</div>
+</aside>
+
+<main class="main" id="main" style="padding:18px">
+  <!-- Dashboard -->
+  <section id="view-dashboard" class="view">
+    <div class="cards" id="widgets">
+      <div class="card"><div class="label">Jenis Barang</div><div class="value" id="wItems">0</div></div>
+      <div class="card"><div class="label">Total Stok</div><div class="value" id="wStock">0</div></div>
+      <div class="card"><div class="label">Total Penerimaan</div><div class="value" id="wReceipts">0</div></div>
+      <div class="card"><div class="label">Total Transfer</div><div class="value" id="wTransfers">0</div></div>
+      <div class="card"><div class="label">Outlet</div><div class="value" id="wOutlets">0</div></div>
+      <div class="card"><div class="label">Pengguna</div><div class="value" id="wUsers">1</div></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin:0">Aksi Cepat</h3>
+      <div class="tools" style="margin-top:8px">
+        <button class="btn" onclick="showView('receipt')">Penerimaan</button>
+        <button class="btn" onclick="showView('transfer')">Transfer</button>
+        <button class="btn ghost" onclick="showView('items')">Master Barang</button>
+        <button class="btn ghost" onclick="showView('reports')">Laporan</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Receipt -->
+  <section id="view-receipt" class="view hidden">
+    <div class="panel">
+      <h3>Penerimaan Barang</h3>
+      <div class="grid-2" style="margin-top:10px">
+        <div class="field"><label>Kode Barang</label><input id="rcpCode" placeholder="BRG-001"></div>
+        <div class="field"><label>Nama Barang</label><input id="rcpName" placeholder="Cat Tembok 10L"></div>
+        <div class="field"><label>Kuantitas</label><input id="rcpQty" type="number" min="1" value="1"></div>
+        <div style="align-self:end"><button class="btn" onclick="addReceipt()">Tambah Penerimaan</button></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Daftar Inventori</h3>
+      <div class="table-wrap">
+        <table id="tblInventory"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Transfer -->
+  <section id="view-transfer" class="view hidden">
+    <div class="panel">
+      <h3>Transfer ke Outlet</h3>
+      <div class="grid-2" style="margin-top:10px">
+        <div class="field"><label>Kode Barang</label><input id="trfCode" placeholder="BRG-001"></div>
+        <div class="field"><label>Nama Barang</label><input id="trfName" placeholder="Cat Tembok 10L"></div>
+        <div class="field"><label>Kuantitas</label><input id="trfQty" type="number" min="1" value="1"></div>
+        <div class="field"><label>Outlet</label><select id="trfOutlet"></select></div>
+        <div style="align-self:end"><button class="btn" onclick="addTransfer()">Transfer</button></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Riwayat Transfer</h3>
+      <div class="table-wrap">
+        <table id="tblTransfers"><thead><tr><th>No</th><th>Tanggal</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Outlet</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Items -->
+  <section id="view-items" class="view hidden">
+    <div class="panel">
+      <h3>Master Barang</h3>
+      <div class="row" style="margin-top:10px;gap:8px">
+        <div class="field" style="flex:1"><label>Kode</label><input id="itCode"></div>
+        <div class="field" style="flex:2"><label>Nama</label><input id="itName"></div>
+        <div style="align-self:end"><button class="btn" onclick="addItem()">Tambah Barang</button></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Daftar Barang</h3>
+      <div class="table-wrap">
+        <table id="tblItems"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Outlets -->
+  <section id="view-outlets" class="view hidden">
+    <div class="panel">
+      <h3>Outlet</h3>
+      <div class="row" style="margin-top:10px;gap:8px">
+        <div class="field" style="flex:1"><label>Kode</label><input id="outCode"></div>
+        <div class="field" style="flex:2"><label>Nama</label><input id="outName"></div>
+        <div style="align-self:end"><button class="btn" onclick="addOutlet()">Tambah Outlet</button></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Daftar Outlet</h3>
+      <div class="table-wrap">
+        <table id="tblOutlets"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reports -->
+  <section id="view-reports" class="view hidden">
+    <div class="panel">
+      <h3>Laporan Transaksi</h3>
+      <div class="row" style="align-items:center;gap:8px">
+        <div class="field" style="flex:1"><label>Jenis</label>
+          <select id="repType" class="control"><option value="all">Semua</option><option value="receipt">Penerimaan</option><option value="transfer">Transfer</option></select>
+        </div>
+        <div class="field" style="flex:2"><label>Pencarian</label><input id="repSearch" placeholder="Cari kode/nama/outlet..."></div>
+        <div class="right tools">
+          <button class="btn ghost" onclick="exportCSV()">Export CSV</button>
+          <button class="btn" onclick="window.print()">Print to PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="table-wrap">
+        <table id="tblReports"><thead><tr><th>No</th><th>Tanggal</th><th>Jenis</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Outlet</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Ringkasan Pengeluaran</h3>
+      <div class="table-wrap">
+        <table id="tblExpenses"><thead><tr><th>Outlet</th><th>Total Qty</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="view-settings" class="view hidden">
+    <div class="panel">
+      <h3>Pengaturan</h3>
+      <div class="grid-2">
+        <div class="field"><label>Username</label><input id="setUser" placeholder="admin"></div>
+        <div class="field"><label>Password</label><input id="setPass" type="password"></div>
+        <div class="row" style="align-items:center"><input type="checkbox" id="setWidgets"><label for="setWidgets" style="margin-left:8px">Tampilkan Widget</label></div>
+        <div style="align-self:end"><button class="btn" onclick="saveSettings()">Simpan</button></div>
+      </div>
+      <div id="saveNote" class="muted" style="margin-top:10px"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal (used for edit) -->
+<div id="modal" class="modal-back hidden" role="dialog">
+  <div class="modal">
+    <h4 id="modalTitle">Edit</h4>
+    <div id="modalBody"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn ghost" onclick="closeModal()">Batal</button>
+      <button class="btn" id="modalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ========= Data layer (localStorage) ========= */
-const DB = {
-  key: 'whm.full.v1',
-  init(){
-    if(!localStorage.getItem(this.key)){
-      const seed = {
-        user: {username:'admin', password:'admin', showWidgets:true, lang:'id'},
-        outlets: [{code:'OT-01', name:'Outlet Utama'}],
-        inventory: [ {code:'BRG-001', name:'Cat Tembok 10L', qty:12}, {code:'BRG-002', name:'Amplas 400', qty:30} ],
-        receipts: [ {date: new Date(Date.now()-86400000*2).toISOString(), code:'BRG-001', name:'Cat Tembok 10L', qty:12, note:'Initial'} ],
-        transfers: [ {date: new Date().toISOString(), code:'BRG-002', name:'Amplas 400', qty:5, outlet:'OT-01', note:'Initial'} ],
-      };
-      localStorage.setItem(this.key, JSON.stringify(seed));
-    }
-  },
-  load(){ return JSON.parse(localStorage.getItem(this.key)); },
-  save(data){ localStorage.setItem(this.key, JSON.stringify(data)); }
-};
-DB.init();
-
-/* ========= i18n (very small) ========= */
-const I18N = {
-  id: {dashboard:'Dashboard', receipt:'Penerimaan Barang', transfer:'Transfer', items:'Master Barang', outlets:'Outlet', reports:'Laporan', settings:'Pengaturan'},
-  en: {dashboard:'Dashboard', receipt:'Goods Receipt', transfer:'Transfer', items:'Items', outlets:'Outlets', reports:'Reports', settings:'Settings'}
-};
-function applyLang(lang){
-  document.documentElement.lang = lang;
-  document.getElementById('lang').value = lang;
-  // simple translations for nav labels:
-  const navMap = {dashboard:'menu_dashboard', receipt:'menu_receipt', transfer:'menu_transfer', items:'menu_items', outlets:'menu_outlets', reports:'menu_reports', settings:'menu_settings'};
-  // For simplicity only replace section headings that we added dynamic keys for? We'll change main nav text.
-  const navLinks = document.querySelectorAll('#navList [data-view]');
-  navLinks.forEach(a=>{
-    const v = a.getAttribute('data-view');
-    if(I18N[lang] && I18N[lang][v]) a.textContent = I18N[lang][v];
-  });
-  const db = DB.load(); db.user.lang = lang; DB.save(db);
+/* ===== data layer ===== */
+const DB_KEY = 'whm.final.v1';
+function dbInit(){
+  if(!localStorage.getItem(DB_KEY)){
+    const seed = {
+      user:{username:'admin',password:'admin',showWidgets:true,lang:'id'},
+      outlets:[{code:'OT-01',name:'Outlet Utama'}],
+      inventory:[{code:'BRG-001',name:'Cat Tembok 10L',qty:12},{code:'BRG-002',name:'Amplas 400',qty:30}],
+      receipts:[{id:uid(),date:new Date(Date.now()-86400000*2).toISOString(),code:'BRG-001',name:'Cat Tembok 10L',qty:12,note:'Seed'}],
+      transfers:[{id:uid(),date:new Date().toISOString(),code:'BRG-002',name:'Amplas 400',qty:5,outlet:'OT-01',note:'Seed'}]
+    };
+    localStorage.setItem(DB_KEY,JSON.stringify(seed));
+  }
 }
-
-/* ========= UI navigation ========= */
-const views = ['dashboard','receipt','transfer','items','outlets','reports','settings'];
-function showView(name){
-  views.forEach(v=>{
-    const el = document.getElementById('view-'+v);
-    if(!el) return;
-    el.classList.toggle('hidden', v !== name);
-    document.querySelectorAll(`#navList [data-view="${v}"]`).forEach(a=> a.classList.toggle('active', v===name));
-  });
-  if(name === 'receipt') renderInventory();
-  if(name === 'transfer') { renderTransfers(); populateOutletSelect(); }
-  if(name === 'items') renderItems();
-  if(name === 'outlets') renderOutlets();
-  if(name === 'reports'){ renderReports(); renderExpenses(); }
-  if(name === 'dashboard') refreshWidgets();
-  location.hash = name;
-}
-document.getElementById('navList').addEventListener('click', e=>{
-  const a = e.target.closest('[data-view]');
-  if(!a) return;
-  e.preventDefault();
-  showView(a.dataset.view);
-});
-
-/* submenu toggle */
-document.querySelectorAll('[data-toggle="sub"]').forEach(btn=>{
-  btn.addEventListener('click', ()=> btn.parentElement.classList.toggle('open'));
-});
-
-/* sidebar toggle mobile */
-document.getElementById('toggleSidebar').addEventListener('click', ()=>{
-  document.getElementById('sidebar').classList.toggle('show');
-});
-
-/* hide sidebar when clicking outside (mobile) */
-document.addEventListener('click', (e)=>{
-  const sidebar = document.getElementById('sidebar');
-  const togg = document.getElementById('toggleSidebar');
-  if(window.innerWidth < 900 && !sidebar.contains(e.target) && !togg.contains(e.target)) sidebar.classList.remove('show');
-});
-
-/* ========= Helpers ========= */
-function sel(id){ return document.getElementById(id); }
-function fmtDate(iso){ return new Date(iso).toLocaleString(); }
+function dbLoad(){ return JSON.parse(localStorage.getItem(DB_KEY)); }
+function dbSave(d){ localStorage.setItem(DB_KEY,JSON.stringify(d)); }
 function uid(){ return 'id'+Math.random().toString(36).slice(2,9); }
 
-/* ========= Widgets & Refresh ========= */
+/* ===== UI helpers ===== */
+function sel(id){ return document.getElementById(id); }
+function showView(name){
+  const views = ['dashboard','receipt','transfer','items','outlets','reports','settings'];
+  views.forEach(v=> {
+    const el = sel('view-'+v);
+    if(!el) return;
+    el.classList.toggle('hidden', v!==name);
+    document.querySelectorAll('#navList [data-view="'+v+'"]').forEach(a=> a.classList.toggle('active', v===name));
+  });
+  if(name==='dashboard') refreshWidgets();
+  if(name==='receipt') renderInventory();
+  if(name==='transfer'){ renderTransfers(); populateOutletSelect(); }
+  if(name==='items') renderItems();
+  if(name==='outlets') renderOutlets();
+  if(name==='reports'){ renderReports(); renderExpenses(); }
+  location.hash = name;
+}
+
+/* ===== sidebar & nav behavior ===== */
+const menuToggle = sel('menuToggle'), sidebar = sel('sidebar');
+menuToggle.addEventListener('click', ()=> sidebar.classList.toggle('show'));
+document.addEventListener('click', (e)=>{
+  if(window.innerWidth < 900 && !sidebar.contains(e.target) && e.target !== menuToggle) sidebar.classList.remove('show');
+});
+document.querySelectorAll('[data-toggle="sub"]').forEach(btn=> btn.addEventListener('click', (e)=>{
+  e.preventDefault(); btn.parentElement.classList.toggle('open');
+}));
+document.getElementById('navList').addEventListener('click', e=>{
+  const a = e.target.closest('[data-view]'); if(!a) return;
+  e.preventDefault(); if(window.innerWidth<900) sidebar.classList.remove('show'); showView(a.dataset.view);
+});
+
+/* ===== widgets ===== */
 function refreshWidgets(){
-  const db = DB.load();
+  const db = dbLoad();
   sel('wItems').textContent = db.inventory.length;
-  sel('wStock').textContent = db.inventory.reduce((a,b)=>a + Number(b.qty||0),0);
+  sel('wStock').textContent = db.inventory.reduce((s,i)=> s + Number(i.qty||0),0);
   sel('wReceipts').textContent = db.receipts.length;
   sel('wTransfers').textContent = db.transfers.length;
   sel('wOutlets').textContent = db.outlets.length;
   sel('wUsers').textContent = 1;
-  const user = db.user || {};
-  sel('currentUser').textContent = `👤 ${user.username || 'admin'}`;
-  sel('setUser').value = user.username || '';
-  sel('setWidgets').checked = user.showWidgets !== false;
-  applyLang(user.lang || 'id');
+  sel('currentUser').textContent = '👤 ' + (db.user.username || 'admin');
+  sel('setUser').value = db.user.username || '';
+  sel('setWidgets').checked = db.user.showWidgets !== false;
+  sel('lang').value = db.user.lang || 'id';
   sel('year').textContent = new Date().getFullYear();
 }
 
-/* ========= Inventory / Receipt ========= */
+/* ===== Inventory / Receipt ===== */
 function renderInventory(){
   const tbody = sel('tblInventory').querySelector('tbody'); tbody.innerHTML = '';
-  const db = DB.load();
-  db.inventory.forEach((item, i)=>{
+  const db = dbLoad();
+  db.inventory.forEach((it,i)=>{
     const tr = document.createElement('tr');
-    const badgeClass = item.qty <=5 ? 'b-danger' : (item.qty < 15 ? 'b-warn' : 'b-ok');
-    tr.innerHTML = `<td>${i+1}</td>
-      <td>${item.code}</td>
-      <td>${item.name}</td>
-      <td><span class="badge ${badgeClass}">${item.qty}</span></td>
-      <td>
-        <div class="tools">
-          <button class="btn ghost" onclick="openEditItem('${item.code}')">Edit</button>
-          <button class="btn secondary" onclick="deleteItem('${item.code}')">Hapus</button>
-        </div>
-      </td>`;
+    const bc = it.qty <=5 ? 'b-danger' : (it.qty < 15 ? 'b-warn' : 'b-ok');
+    tr.innerHTML = `<td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td><span class="badge ${bc}">${it.qty}</span></td>
+      <td><div class="tools"><button class="btn ghost" onclick="openEditItem('${it.code}')">Edit</button><button class="btn secondary" onclick="deleteItem('${it.code}')">Hapus</button></div></td>`;
     tbody.appendChild(tr);
   });
 }
 
-/* Add receipt: update inventory & receipts */
 function addReceipt(){
-  const code = sel('rcpCode').value.trim();
-  const name = sel('rcpName').value.trim();
-  const qty = Number(sel('rcpQty').value) || 0;
-  if(!code || !name || qty <= 0) return alert('Lengkapi data penerimaan (kode, nama, qty).');
-  const db = DB.load();
-  // update or add inventory
-  let item = db.inventory.find(x=>x.code === code);
-  if(!item){
-    item = {code, name, qty};
-    db.inventory.push(item);
-  } else {
-    item.name = name;
-    item.qty = Number(item.qty || 0) + qty;
-  }
-  db.receipts.push({id: uid(), date:new Date().toISOString(), code, name, qty, note:'Receipt'});
-  DB.save(db);
-  sel('rcpCode').value=''; sel('rcpName').value=''; sel('rcpQty').value=1;
+  const code = sel('rcpCode').value.trim(), name = sel('rcpName').value.trim(), qty = Number(sel('rcpQty').value) || 0;
+  if(!code || !name || qty <= 0) return alert('Lengkapi data penerimaan.');
+  const db = dbLoad();
+  let item = db.inventory.find(x=>x.code===code);
+  if(!item){ item = {code,name,qty}; db.inventory.push(item); } else { item.name = name; item.qty = Number(item.qty||0) + qty; }
+  db.receipts.push({id:uid(),date:new Date().toISOString(),code,name,qty,note:'Receipt'});
+  dbSave(db); sel('rcpCode').value=''; sel('rcpName').value=''; sel('rcpQty').value=1;
   renderInventory(); renderItems(); refreshWidgets();
 }
 
-/* ========= Transfer ========= */
+/* ===== Transfers ===== */
 function populateOutletSelect(){
   const selEl = sel('trfOutlet'); selEl.innerHTML = '';
-  const db = DB.load();
-  db.outlets.forEach(o=>{
-    const opt = document.createElement('option'); opt.value = o.code; opt.textContent = `${o.code} — ${o.name}`; selEl.appendChild(opt);
-  });
-  sel('trfMsg').textContent = db.outlets.length ? '' : 'Belum ada outlet. Tambahkan di menu Outlet.';
+  const db = dbLoad();
+  db.outlets.forEach(o => { const opt = document.createElement('option'); opt.value=o.code; opt.textContent = `${o.code} — ${o.name}`; selEl.appendChild(opt); });
 }
 
 function addTransfer(){
-  const code = sel('trfCode').value.trim();
-  const name = sel('trfName').value.trim();
-  const qty = Number(sel('trfQty').value) || 0;
-  const outlet = sel('trfOutlet').value;
+  const code = sel('trfCode').value.trim(), name = sel('trfName').value.trim(), qty = Number(sel('trfQty').value)||0, outlet = sel('trfOutlet').value;
   if(!code||!name||qty<=0||!outlet) return alert('Lengkapi data transfer.');
-  const db = DB.load();
-  const inv = db.inventory.find(x=>x.code === code);
-  if(!inv || Number(inv.qty) < qty) return alert('Stok tidak cukup atau barang belum ada di inventori.');
+  const db = dbLoad(); const inv = db.inventory.find(x=>x.code===code);
+  if(!inv || Number(inv.qty) < qty) return alert('Stok tidak cukup atau barang belum ada.');
   inv.qty = Number(inv.qty) - qty;
-  db.transfers.push({id: uid(), date:new Date().toISOString(), code, name, qty, outlet, note:'Transfer'});
-  DB.save(db);
-  sel('trfCode').value=''; sel('trfName').value=''; sel('trfQty').value=1;
-  renderTransfers(); renderInventory(); renderItems(); refreshWidgets();
+  db.transfers.push({id:uid(),date:new Date().toISOString(),code,name,qty,outlet,note:'Transfer'});
+  dbSave(db); renderTransfers(); renderInventory(); renderItems(); refreshWidgets();
 }
 
 function renderTransfers(){
   const tbody = sel('tblTransfers').querySelector('tbody'); tbody.innerHTML='';
-  const db = DB.load();
+  const db = dbLoad();
   db.transfers.slice().reverse().forEach((t,i)=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td>
-      <td>${fmtDate(t.date)}</td>
-      <td>${t.code}</td>
-      <td>${t.name}</td>
-      <td>${t.qty}</td>
-      <td>${t.outlet || '-'}</td>`;
+    tr.innerHTML = `<td>${i+1}</td><td>${new Date(t.date).toLocaleString()}</td><td>${t.code}</td><td>${t.name}</td><td>${t.qty}</td><td>${t.outlet || '-'}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-/* ========= Master Items CRUD ========= */
+/* ===== Items CRUD ===== */
 function renderItems(){
   const tbody = sel('tblItems').querySelector('tbody'); tbody.innerHTML='';
-  const db = DB.load();
+  const db = dbLoad();
   db.inventory.forEach((it,i)=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td>
-      <td>${it.code}</td>
-      <td>${it.name}</td>
-      <td>${it.qty}</td>
-      <td>
-        <div class="tools">
-          <button class="btn ghost" onclick="openEditItem('${it.code}')">Edit</button>
-          <button class="btn secondary" onclick="deleteItem('${it.code}')">Hapus</button>
-        </div>
-      </td>`;
+    tr.innerHTML = `<td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${it.qty}</td>
+      <td><div class="tools"><button class="btn ghost" onclick="openEditItem('${it.code}')">Edit</button><button class="btn secondary" onclick="deleteItem('${it.code}')">Hapus</button></div></td>`;
     tbody.appendChild(tr);
   });
 }
 
 function addItem(){
-  const code = sel('itCode').value.trim();
-  const name = sel('itName').value.trim();
-  if(!code||!name) return alert('Isi kode dan nama barang.');
-  const db = DB.load();
-  if(db.inventory.some(x=>x.code===code)) return alert('Kode barang sudah ada.');
-  db.inventory.push({code, name, qty:0});
-  DB.save(db);
-  sel('itCode').value=''; sel('itName').value='';
-  renderItems(); renderInventory(); refreshWidgets();
+  const code = sel('itCode').value.trim(), name = sel('itName').value.trim();
+  if(!code||!name) return alert('Isi kode dan nama.');
+  const db = dbLoad(); if(db.inventory.some(x=>x.code===code)) return alert('Kode sudah ada.');
+  db.inventory.push({code,name,qty:0}); dbSave(db); sel('itCode').value=''; sel('itName').value=''; renderItems(); renderInventory(); refreshWidgets();
 }
 
 function openEditItem(code){
-  const db = DB.load();
-  const item = db.inventory.find(x=>x.code === code);
+  const db = dbLoad(); const item = db.inventory.find(x=>x.code===code);
   if(!item) return alert('Item tidak ditemukan.');
   showModal('Edit Barang', `
     <div class="field"><label>Kode</label><input id="editCode" value="${item.code}" disabled></div>
     <div class="field"><label>Nama</label><input id="editName" value="${escapeHtml(item.name)}"></div>
     <div class="field"><label>Qty</label><input id="editQty" type="number" value="${item.qty}"></div>
   `, ()=>{
-    const db2 = DB.load();
-    const it = db2.inventory.find(x=>x.code===code);
-    it.name = sel('editName').value.trim();
-    it.qty = Number(sel('editQty').value) || 0;
-    DB.save(db2);
-    closeModal(); renderItems(); renderInventory(); refreshWidgets();
+    const db2 = dbLoad(); const it = db2.inventory.find(x=>x.code===code);
+    it.name = sel('editName').value.trim(); it.qty = Number(sel('editQty').value)||0; dbSave(db2); closeModal(); renderItems(); renderInventory(); refreshWidgets();
   });
 }
 
 function deleteItem(code){
   if(!confirm('Hapus barang ini?')) return;
-  const db = DB.load();
-  db.inventory = db.inventory.filter(x=>x.code !== code);
-  // also remove receipts/transfers? We'll keep history but code removed from inventory.
-  DB.save(db);
-  renderItems(); renderInventory(); refreshWidgets();
+  const db = dbLoad(); db.inventory = db.inventory.filter(x=>x.code!==code); dbSave(db); renderItems(); renderInventory(); refreshWidgets();
 }
 
-/* ========= Outlets CRUD ========= */
+/* ===== Outlets CRUD ===== */
 function renderOutlets(){
   const tbody = sel('tblOutlets').querySelector('tbody'); tbody.innerHTML='';
-  const db = DB.load();
+  const db = dbLoad();
   db.outlets.forEach((o,i)=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${o.code}</td><td>${o.name}</td>
-      <td>
-        <div class="tools">
-          <button class="btn ghost" onclick="openEditOutlet('${o.code}')">Edit</button>
-          <button class="btn secondary" onclick="deleteOutlet('${o.code}')">Hapus</button>
-        </div>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-  populateOutletSelect();
-}
-
-function addOutlet(){
-  const code = sel('outCode').value.trim();
-  const name = sel('outName').value.trim();
-  if(!code||!name) return alert('Isi kode dan nama outlet.');
-  const db = DB.load();
-  if(db.outlets.some(x=>x.code===code)) return alert('Kode outlet sudah ada.');
-  db.outlets.push({code,name});
-  DB.save(db);
-  sel('outCode').value=''; sel('outName').value='';
-  renderOutlets(); refreshWidgets();
-}
-
-function openEditOutlet(code){
-  const db = DB.load(); const o = db.outlets.find(x=>x.code===code);
-  if(!o) return alert('Outlet tidak ditemukan.');
-  showModal('Edit Outlet', `
-    <div class="field"><label>Kode</label><input id="editOutCode" value="${o.code}" disabled></div>
-    <div class="field"><label>Nama</label><input id="editOutName" value="${escapeHtml(o.name)}"></div>
-  `, ()=>{
-    const db2 = DB.load(); const out = db2.outlets.find(x=>x.code===code);
-    out.name = sel('editOutName').value.trim();
-    DB.save(db2); closeModal(); renderOutlets(); populateOutletSelect(); refreshWidgets();
-  });
-}
-
-function deleteOutlet(code){
-  if(!confirm('Hapus outlet ini?')) return;
-  const db = DB.load();
-  db.outlets = db.outlets.filter(x=>x.code !== code);
-  DB.save(db); renderOutlets(); populateOutletSelect(); refreshWidgets();
-}
-
-/* ========= Reports ========= */
-function collectRows(){
-  const db = DB.load();
-  const r = db.receipts.map(x=> ({...x, type:'receipt'}));
-  const t = db.transfers.map(x=> ({...x, type:'transfer'}));
-  return [...r,...t].sort((a,b)=>new Date(b.date)-new Date(a.date));
-}
-function renderReports(){
-  const tbody = sel('tblReports').querySelector('tbody'); tbody.innerHTML='';
-  const rows = collectRows();
-  const typeFilter = sel('repType').value;
-  const q = sel('repSearch').value.trim().toLowerCase();
-  let filtered = rows.filter(r=> typeFilter==='all' ? true : r.type===typeFilter);
-  if(q) filtered = filtered.filter(r=> (r.code + ' ' + r.name + ' ' + (r.outlet||'')).toLowerCase().includes(q));
-  filtered.forEach((row,i)=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${fmtDate(row.date)}</td><td>${row.type}</td><td>${row.code}</td><td>${row.name}</td><td>${row.qty}</td><td>${row.outlet||'-'}</td>`;
+    tr.innerHTML = `<td>${i+1}</td><td>${o.code}</td><td>${o.name}</td><td><div class="tools"><button class="btn ghost" onclick="openEditOutlet('${o.code}')">Edit</button><button class="btn secondary" onclick="deleteOutlet('${o.code}')">Hapus</button></div></td>`;
     tbody.appendChild(tr);
   });
 }
 
-function renderExpenses(){
-  const tbody = sel('tblExpenses').querySelector('tbody'); tbody.innerHTML='';
-  const db = DB.load();
-  const agg = {};
-  db.transfers.forEach(t => agg[t.outlet] = (agg[t.outlet]||0) + Number(t.qty));
-  db.outlets.forEach(out => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${out.code} — ${out.name}</td><td>${agg[out.code]||0}</td>`;
-    tbody.appendChild(tr);
-  });
-}
+function addOutlet(){ const code = sel('outCode').value.trim(), name = sel('outName').value.trim(); if(!code||!name) return alert('Isi kode & nama'); const db = dbLoad(); if(db.outlets.some(x=>x.code===code)) return alert('Kode outlet sudah ada'); db.outlets.push({code,name}); dbSave(db); sel('outCode').value=''; sel('outName').value=''; renderOutlets(); refreshWidgets(); populateOutletSelect(); }
+function openEditOutlet(code){ const db = dbLoad(); const o = db.outlets.find(x=>x.code===code); if(!o) return alert('Not found'); showModal('Edit Outlet', `<div class="field"><label>Kode</label><input id="editOutCode" value="${o.code}" disabled></div><div class="field"><label>Nama</label><input id="editOutName" value="${escapeHtml(o.name)}"></div>`, ()=>{ const db2=dbLoad(); const out = db2.outlets.find(x=>x.code===code); out.name = sel('editOutName').value.trim(); dbSave(db2); closeModal(); renderOutlets(); populateOutletSelect(); refreshWidgets(); }); }
+function deleteOutlet(code){ if(!confirm('Hapus outlet?')) return; const db = dbLoad(); db.outlets = db.outlets.filter(x=>x.code!==code); dbSave(db); renderOutlets(); populateOutletSelect(); refreshWidgets(); }
 
-function exportCSV(){
-  // Export reports currently filtered
-  const headers = ['Tanggal','Jenis','Kode','Nama','Qty','Outlet'];
-  const rows = [];
-  const trs = sel('tblReports').querySelectorAll('tbody tr');
-  trs.forEach(tr=> {
-    const cols = Array.from(tr.children).slice(1).map(td => td.textContent.replace(/\n/g,' ').trim()); // skip No
-    rows.push(cols.join(','));
-  });
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'reports.csv'; document.body.appendChild(a);
-  a.click(); a.remove(); URL.revokeObjectURL(url);
-}
+/* ===== Reports ===== */
+function collectRows(){ const db = dbLoad(); const r = db.receipts.map(x=>({...x,type:'receipt'})); const t = db.transfers.map(x=>({...x,type:'transfer'})); return [...r,...t].sort((a,b)=>new Date(b.date)-new Date(a.date)); }
+function renderReports(){ const tbody = sel('tblReports').querySelector('tbody'); tbody.innerHTML=''; const rows = collectRows(); const tf = sel('repType').value; const q = sel('repSearch').value.trim().toLowerCase(); let out = rows.filter(r=> tf==='all' ? true : r.type===tf); if(q) out = out.filter(r=>(r.code+' '+r.name+' '+(r.outlet||'')).toLowerCase().includes(q)); out.forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${i+1}</td><td>${new Date(r.date).toLocaleString()}</td><td>${r.type}</td><td>${r.code}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.outlet||'-'}</td>`; tbody.appendChild(tr); }); }
+function renderExpenses(){ const tbody = sel('tblExpenses').querySelector('tbody'); tbody.innerHTML=''; const db = dbLoad(); const agg = {}; db.transfers.forEach(t=> agg[t.outlet] = (agg[t.outlet]||0) + Number(t.qty)); db.outlets.forEach(o=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${o.code} — ${o.name}</td><td>${agg[o.code]||0}</td>`; tbody.appendChild(tr); }); }
+function exportCSV(){ const rows = []; const headers = ['Tanggal','Jenis','Kode','Nama','Qty','Outlet']; rows.push(headers.join(',')); sel('tblReports').querySelectorAll('tbody tr').forEach(tr=>{ const cols = Array.from(tr.children).slice(1).map(td=>escapeCSV(td.textContent.trim())); rows.push(cols.join(',')); }); const blob = new Blob([rows.join('\n')],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='reports.csv'; a.click(); URL.revokeObjectURL(url); }
+function escapeCSV(s){ return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
 
-/* ========= Settings ========= */
-function saveSettings(){
-  const db = DB.load();
-  const u = sel('setUser').value.trim();
-  const p = sel('setPass').value;
-  if(u) db.user.username = u;
-  if(p) db.user.password = p; // demo: plain text. production: hash & server
-  db.user.showWidgets = sel('setWidgets').checked;
-  db.user.lang = sel('lang').value;
-  DB.save(db);
-  sel('saveNote').textContent = 'Pengaturan disimpan.';
-  refreshWidgets();
-}
+/* ===== Settings ===== */
+function saveSettings(){ const db = dbLoad(); const u = sel('setUser').value.trim(); const p = sel('setPass').value; if(u) db.user.username = u; if(p) db.user.password = p; db.user.showWidgets = sel('setWidgets').checked; db.user.lang = sel('lang').value; dbSave(db); sel('saveNote').textContent = 'Disimpan.'; refreshWidgets(); }
 
-/* lang change */
-sel('lang').addEventListener('change', (e)=>{ const db = DB.load(); db.user.lang = e.target.value; DB.save(db); applyLang(e.target.value); });
-
-/* filter events */
-sel('repType').addEventListener('change', renderReports);
-sel('repSearch').addEventListener('input', renderReports);
-
-/* ========= Modal helpers ========= */
-function showModal(title, htmlContent, onSave){
-  sel('modalTitle').textContent = title;
-  sel('modalBody').innerHTML = htmlContent;
-  sel('modalEdit').classList.remove('hidden');
-  const back = sel('modalEdit').classList.contains('hidden') ? null : document.getElementById('modalEdit');
-  // Wire save button
-  const btn = sel('modalSave'); btn.onclick = onSave;
-  sel('modalEdit').classList.remove('hidden');
-}
-function closeModal(){
-  sel('modalEdit').classList.add('hidden');
-  sel('modalBody').innerHTML = '';
-  sel('modalSave').onclick = null;
-}
-function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
-
-/* small wrapper to get modal elements */
-Object.defineProperty(window, 'modalElements', {get: ()=>({back: sel('modalEdit'), body: sel('modalBody'), save: sel('modalSave')})});
-
-function selOrCreate(id){
-  return document.getElementById(id);
-}
-
-/* Provide showModal alternative (we used earlier) */
+/* ===== Modal helpers ===== */
 function showModal(title, html, onSave){
-  sel('modalTitle').textContent = title;
-  sel('modalBody').innerHTML = html;
-  sel('modalEdit').classList.remove('hidden');
-  sel('modalSave').onclick = onSave;
+  sel('modal').classList.remove('hidden'); sel('modalTitle').textContent = title; sel('modalBody').innerHTML = html; sel('modalSave').onclick = onSave;
 }
-function closeModal(){ sel('modalEdit').classList.add('hidden'); sel('modalBody').innerHTML = ''; sel('modalSave').onclick = null; }
+function closeModal(){ sel('modal').classList.add('hidden'); sel('modalBody').innerHTML=''; sel('modalSave').onclick = null; }
 
-/* ========= Safe binding: some elements previously referenced by id string ==== */
-/* Ensure modalEdit etc exist in DOM references we used earlier */
-(function wireModalIDs(){
-  // Some earlier code references 'modalEdit' etc. Ensure they map:
-  // We used id="modalEdit" for backdrop; already present.
-  // Ensure modalTitle, modalBody, modalSave exist - yes.
-})();
-
-/* ========= Utilities on load ========= */
+/* ===== Utilities ===== */
+function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function init(){
-  DB.init();
-  refreshWidgets();
-  renderInventory();
-  renderItems();
-  renderOutlets();
-  renderTransfers();
-  renderReports();
-  renderExpenses();
-  populateOutletSelect();
-  // Hash routing
-  const start = (location.hash || '#dashboard').replace('#','');
-  if(views.includes(start)) showView(start); else showView('dashboard');
-  // link nav keys text depending on language
-  applyLang(DB.load().user.lang || 'id');
+  dbInit(); refreshWidgets(); renderInventory(); renderItems(); renderOutlets(); renderTransfers(); renderReports(); renderExpenses(); populateOutletSelect();
+  // routing
+  const hash = (location.hash || '#dashboard').replace('#',''); showView(hash);
+  sel('repType').addEventListener('change', renderReports); sel('repSearch').addEventListener('input', renderReports);
+  sel('lang').addEventListener('change', (e)=>{ const db=dbLoad(); db.user.lang = e.target.value; dbSave(db); });
+  // sidebar auto-close on small screens when a view clicked
+  document.querySelectorAll('#navList [data-view]').forEach(a=> a.addEventListener('click', ()=>{ if(window.innerWidth<900) sidebar.classList.remove('show'); }));
 }
-
-/* small polyfill for elements references used earlier */
-if(!sel('modalEdit')) {
-  // nothing
-}
-
-/* ========= Minor helpers to avoid duplicate definitions ========= */
-/* Some functions were declared twice due to iterative writing; ensure single copies present.
-   All necessary functions are defined above. */
-
 window.addEventListener('load', init);
-
-/* remove duplication errors: ensure modal element ids */
-(function ensureModalIds(){
-  // modal backdrop id = modalEdit? We used id modalEdit earlier but created id modalEdit? actual ID is modalEdit? check:
-  // In markup used id="modalEdit"? Actually: id="modalEdit" earlier. Good.
-  if(!sel('modalEdit')) return;
-})();
-
-/* For safety with browser console, expose DB for debugging */
-window._WHM = {
-  load: ()=>DB.load(),
-  save: (d)=>DB.save(d),
-  clear: ()=>localStorage.removeItem(DB.key)
-};
 </script>
+
 </body>
 </html>
