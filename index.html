@@ -1,344 +1,570 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gudang Material Dashboard</title>
-    <style>
-        * {margin: 0; padding: 0; box-sizing: border-box;}
-        body, html {
-            font-family: 'Nunito', sans-serif;
-            background-color: #f8f9fa;
-            color: #444;
-            height: 100vh;
-        }
-        a {text-decoration: none; color: inherit;}
-        
-        /* Sidebar */
-        .sidebar {
-            background-color: #4e73df;
-            width: 250px;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            padding: 20px 0;
-            transition: width 0.3s ease;
-            overflow-y: auto;
-        }
-        .sidebar.collapsed {width: 60px;}
-        .logo {
-            font-weight: 700;
-            font-size: 22px;
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 1px solid rgba(255,255,255,0.15);
-            padding-bottom: 15px;
-        }
-        .sidebar.collapsed .logo {font-size: 0;}
-        .profile {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 0 15px;
-        }
-        .profile img {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            margin-bottom: 8px;
-        }
-        .profile h4, .profile span {transition: opacity 0.3s ease;}
-        .sidebar.collapsed .profile h4,
-        .sidebar.collapsed .profile span {opacity: 0;}
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Warehouse Manager</title>
+<style>
+  :root{
+    --primary:#4e73df;--primary-2:#2e59d9;--bg:#f8f9fa;--ink:#343a40;
+    --card:#ffffff;--muted:#6c757d;--ok:#1cc88a;--warn:#f6c23e;--danger:#e74a3b;
+    --shadow:0 6px 18px rgba(0,0,0,.06)
+  }
+  *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  a{text-decoration:none;color:inherit}
 
-        .nav-links {flex-grow: 1;}
-        .nav-links ul {list-style: none;}
-        .nav-links li {
-            position: relative;
-            margin-bottom: 10px;
-        }
-        .nav-links a {
-            color: #d1d3e2;
-            padding: 10px 15px;
-            display: block;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-            cursor: pointer;
-        }
-        .nav-links a:hover, .nav-links a.active {
-            background-color: #2e59d9;
-            color: #fff;
-        }
+  /* Topbar */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 18px;background:#fff;box-shadow:var(--shadow)}
+  .brand{display:flex;gap:10px;align-items:center;font-weight:700;color:var(--primary)}
+  .brand .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#7c9af5)}
+  .top-actions{display:flex;gap:8px;align-items:center}
+  .btn,button,input,select{font:inherit}
+  .btn{border:0;border-radius:8px;padding:8px 12px;background:var(--primary);color:#fff;cursor:pointer}
+  .btn.secondary{background:var(--ink);color:#fff;opacity:.85}
+  .btn.ghost{background:transparent;color:var(--primary);border:1px solid var(--primary)}
+  .lang-select, .user-input{border:1px solid #dee2e6;border-radius:8px;padding:7px 10px;background:#fff}
 
-        /* Submenu */
-        .submenu {
-            display: none;
-            padding-left: 20px;
-            margin-top: 5px;
-        }
-        .submenu li a {
-            font-size: 14px;
-            color: #d1d3e2;
-        }
-        .submenu li a:hover {
-            color: #fff;
-        }
-        .nav-links li.open .submenu {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-        @keyframes slideDown {
-            from {opacity: 0; transform: translateY(-5px);}
-            to {opacity: 1; transform: translateY(0);}
-        }
+  /* Layout */
+  .wrap{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 62px)}
+  .sidebar{background:#1f2a48;color:#e9ecff;padding:16px 12px}
+  .sidebar h6{margin:18px 8px 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#92a1d1}
+  .nav{list-style:none;padding:0;margin:0}
+  .nav li{margin:6px 0}
+  .nav a{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 12px;border-radius:8px;color:#e9ecff}
+  .nav a:hover,.nav a.active{background:#2a3870}
+  .submenu{display:none;padding-left:10px}
+  .nav li.open>.submenu{display:block;animation:fade .2s}
+  @keyframes fade{from{opacity:.3;transform:translateY(-2px)}to{opacity:1;transform:none}}
 
-        /* Main Content */
-        .main-content {
-            margin-left: 250px;
-            padding: 20px 30px;
-            transition: margin-left 0.3s ease;
-        }
-        .sidebar.collapsed ~ .main-content {margin-left: 60px;}
-        .header {
-            color: #4e73df;
-            font-weight: 700;
-            font-size: 28px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .toggle-btn {
-            background: #4e73df;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            border: none;
-            font-size: 14px;
-        }
+  .content{padding:22px}
+  .cards{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:14px;margin-bottom:18px}
+  .card{background:var(--card);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .card .label{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .card .value{font-weight:800;color:var(--primary);font-size:24px}
+  .card.badge-ok .value{color:var(--ok)}.card.badge-warn .value{color:var(--warn)}.card.badge-danger .value{color:var(--danger)}
 
-        /* Cards */
-        .cards {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        .card {
-            flex: 1 1 180px;
-            background-color: #f8f9fc;
-            border-left: 4px solid #4e73df;
-            padding: 15px 20px;
-            border-radius: 6px;
-            box-shadow: 0 2px 7px rgba(0,0,0,0.03);
-        }
-        .card.orange {border-color: #f6c23e;}
-        .card.green {border-color: #1cc88a;}
-        .card.blue {border-color: #36b9cc;}
-        .card .title {font-size: 13px; font-weight: 600; color: #858796; margin-bottom: 7px;}
-        .card .value {font-weight: 700; font-size: 22px; color: #4e73df;}
+  .panel{background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:16px;margin-bottom:18px}
+  .panel h3{margin:0 0 12px;font-size:18px;color:var(--primary)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:6px;flex:1}
+  .field input,.field select,.field textarea{padding:9px 11px;border:1px solid #ced4da;border-radius:10px;background:#fff}
+  .table-wrap{overflow:auto;border:1px solid #e9ecef;border-radius:10px}
+  table{border-collapse:collapse;width:100%;min-width:820px}
+  thead th{position:sticky;top:0;background:#f4f6ff;color:var(--primary);text-align:left;font-weight:700;padding:10px;border-bottom:1px solid #e9ecef}
+  tbody td{padding:10px;border-bottom:1px solid #f1f3f5}
+  tr:hover{background:#f8fbff}
+  .badge{display:inline-block;min-width:34px;text-align:center;padding:3px 8px;border-radius:999px;color:#fff;font-weight:700;font-size:12px}
+  .b-ok{background:var(--ok)}.b-warn{background:var(--warn)}.b-danger{background:var(--danger)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap}
+  .muted{color:var(--muted);font-size:13px}
 
-        /* Table */
-        .table-wrapper {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-            padding: 25px 30px;
-            overflow-x: auto;
-        }
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .search-box {
-            padding: 8px 12px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 220px;
-        }
-        .filter-select {
-            padding: 8px 12px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        table {width: 100%; border-collapse: collapse; font-size: 14px;}
-        thead {background-color: #f8f9fc;}
-        thead th {padding: 12px 15px; text-align: left; font-weight: 600; color: #4e73df;}
-        tbody td {padding: 12px 15px;}
-        tbody tr:hover {background-color: #f1f3f5; cursor: pointer;}
-        tbody tr.selected {background-color: #dbeafe;}
+  /* Utility */
+  .hidden{display:none !important}
+  .right{margin-left:auto}
 
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 12px;
-            text-align: center;
-            display: inline-block;
-        }
-        .status-danger {background-color: #e74a3b; color: white;}
-        .status-warning {background-color: #f6c23e; color: white;}
-        .status-success {background-color: #1cc88a; color: white;}
-    </style>
+  /* Responsive */
+  @media (max-width: 990px){
+    .wrap{grid-template-columns:1fr}
+    .sidebar{position:fixed;inset:62px 0 0 auto;width:260px;transform:translateX(-100%);transition:.25s}
+    .sidebar.show{transform:none}
+    .content{padding:18px}
+    .cards{grid-template-columns:repeat(2,1fr)}
+    .grid-2{grid-template-columns:1fr}
+  }
+
+  /* Print (for PDF) */
+  @media print{
+    .topbar,.sidebar,.tools,.cards{display:none !important}
+    .content{padding:0}
+    .panel{box-shadow:none;border:0;margin:0 0 10px}
+    table{min-width:0}
+  }
+</style>
 </head>
 <body>
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="brand"><div class="logo"></div><div>Warehouse Manager</div></div>
+    <div class="top-actions">
+      <button class="btn ghost" id="toggleSidebarBtn">☰</button>
+      <select id="lang" class="lang-select" title="Language">
+        <option value="id">Bahasa Indonesia</option>
+        <option value="en">English</option>
+      </select>
+      <span id="currentUser" class="muted"></span>
+    </div>
+  </header>
 
+  <div class="wrap">
     <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="logo">Gudang Material</div>
-        <div class="profile">
-            <img src="https://i.pravatar.cc/55" alt="Avatar" />
-            <h4>Andre Setiawan</h4>
-            <span>Administrator</span>
-        </div>
-        <nav class="nav-links">
-            <ul>
-                <li><a href="#" class="active">Dashboard</a></li>
-                <li>
-                    <a class="has-submenu">Master Data ▾</a>
-                    <ul class="submenu">
-                        <li><a href="#">Data Barang</a></li>
-                        <li><a href="#">Kategori Barang</a></li>
-                        <li><a href="#">Supplier</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <a class="has-submenu">Transaksi ▾</a>
-                    <ul class="submenu">
-                        <li><a href="#">Barang Masuk</a></li>
-                        <li><a href="#">Barang Keluar</a></li>
-                    </ul>
-                </li>
-                <li><a href="#">Laporan</a></li>
-                <li><a href="#">Pengaturan</a></li>
-            </ul>
-        </nav>
+    <aside class="sidebar" id="sidebar">
+      <h6 data-i="nav">Navigasi</h6>
+      <ul class="nav" id="nav">
+        <li><a href="#dashboard" class="active" data-view="dashboard" data-i="menu_dashboard">Dashboard</a></li>
+
+        <li class="has-sub">
+          <a class="with-caret" data-toggle="submenu" data-i="menu_opsi">Operasional <span>▾</span></a>
+          <ul class="submenu">
+            <li><a href="#receipt" data-view="receipt" data-i="menu_receipt">Penerimaan Barang</a></li>
+            <li><a href="#transfer" data-view="transfer" data-i="menu_transfer">Transfer ke Outlet</a></li>
+          </ul>
+        </li>
+
+        <li class="has-sub">
+          <a class="with-caret" data-toggle="submenu" data-i="menu_master">Master Data <span>▾</span></a>
+          <ul class="submenu">
+            <li><a href="#outlets" data-view="outlets" data-i="menu_outlet">Outlet</a></li>
+          </ul>
+        </li>
+
+        <li><a href="#reports" data-view="reports" data-i="menu_reports">Laporan</a></li>
+        <li><a href="#settings" data-view="settings" data-i="menu_settings">Pengaturan</a></li>
+      </ul>
+
+      <div class="muted" style="margin:18px 8px 8px;">© <span id="year"></span> Warehouse</div>
     </aside>
 
     <!-- Main -->
-    <main class="main-content">
-        <header class="header">
-            <h1>Dashboard</h1>
-            <button class="toggle-btn" onclick="toggleSidebar()">☰ Menu</button>
-        </header>
+    <main class="content">
 
-        <!-- Cards -->
-        <section class="cards">
-            <div class="card"><div class="title">Data Gudang</div><div class="value">10</div></div>
-            <div class="card green"><div class="title">Data Barang Masuk</div><div class="value">11</div></div>
-            <div class="card orange"><div class="title">Data Barang Keluar</div><div class="value">14</div></div>
-            <div class="card blue"><div class="title">Data Kategori Barang</div><div class="value">14</div></div>
-            <div class="card blue"><div class="title">Data Supplier</div><div class="value">10</div></div>
-            <div class="card green"><div class="title">Profil</div><div class="value">3</div></div>
-        </section>
+      <!-- DASHBOARD -->
+      <section id="view-dashboard">
+        <div class="cards" id="widgets">
+          <div class="card"><div class="label" data-i="w_items">Jenis Barang</div><div class="value" id="wItems">0</div></div>
+          <div class="card badge-ok"><div class="label" data-i="w_stock">Total Stok</div><div class="value" id="wStock">0</div></div>
+          <div class="card badge-warn"><div class="label" data-i="w_receipts">Penerimaan</div><div class="value" id="wReceipts">0</div></div>
+          <div class="card badge-danger"><div class="label" data-i="w_transfers">Transfer</div><div class="value" id="wTransfers">0</div></div>
+          <div class="card"><div class="label" data-i="w_outlets">Outlet</div><div class="value" id="wOutlets">0</div></div>
+          <div class="card"><div class="label" data-i="w_users">Pengguna</div><div class="value" id="wUsers">1</div></div>
+        </div>
 
-        <!-- Table -->
-        <section class="table-wrapper">
-            <div class="table-header">
-                <input type="text" class="search-box" id="searchInput" placeholder="Cari barang...">
-                <select class="filter-select" id="filterStok">
-                    <option value="all">Semua Barang</option>
-                    <option value="safe">Stok Aman</option>
-                    <option value="low">Stok Menipis</option>
-                    <option value="critical">Stok Kritis</option>
-                </select>
-            </div>
-            <table id="stockTable">
-                <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>ID Barang</th>
-                        <th>Nama Barang</th>
-                        <th>Jenis Barang</th>
-                        <th>Stok</th>
-                        <th>Satuan</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>10001</td>
-                        <td>Cat tembok 10L</td>
-                        <td>Material</td>
-                        <td><span class="status-badge status-danger">5</span></td>
-                        <td>Liter</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>10003</td>
-                        <td>Amplas Cat</td>
-                        <td>Bahan Kimia Penghilang</td>
-                        <td><span class="status-badge status-warning">7</span></td>
-                        <td>Liter</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>10005</td>
-                        <td>Thinner 5L</td>
-                        <td>Bahan Kimia</td>
-                        <td><span class="status-badge status-success">25</span></td>
-                        <td>Liter</td>
-                    </tr>
-                </tbody>
+        <div class="panel">
+          <h3 data-i="quick_actions">Aksi Cepat</h3>
+          <div class="tools">
+            <button class="btn" onclick="showView('receipt')"><span data-i="menu_receipt">Penerimaan Barang</span></button>
+            <button class="btn" onclick="showView('transfer')"><span data-i="menu_transfer">Transfer ke Outlet</span></button>
+            <button class="btn ghost" onclick="showView('reports')"><span data-i="menu_reports">Laporan</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PENERIMAAN BARANG -->
+      <section id="view-receipt" class="hidden">
+        <div class="panel">
+          <h3 data-i="receipt_title">Penerimaan Barang</h3>
+          <div class="grid-2">
+            <div class="field"><label data-i="code">Kode Barang</label><input id="rcpCode" placeholder="BRG-001"></div>
+            <div class="field"><label data-i="name">Nama Barang</label><input id="rcpName" placeholder="Cat Tembok 10L"></div>
+            <div class="field"><label data-i="qty">Kuantitas</label><input id="rcpQty" type="number" min="1" value="1"></div>
+            <div class="field"><label>&nbsp;</label><button class="btn" onclick="addReceipt()" data-i="add">Tambah</button></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 data-i="inventory">Inventori</h3>
+          <div class="table-wrap">
+            <table id="tblInventory">
+              <thead><tr>
+                <th data-i="code">Kode</th><th data-i="name">Nama</th><th data-i="qty">Qty</th>
+              </tr></thead>
+              <tbody></tbody>
             </table>
-        </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRANSFER KE OUTLET -->
+      <section id="view-transfer" class="hidden">
+        <div class="panel">
+          <h3 data-i="transfer_title">Transfer Barang ke Outlet</h3>
+          <div class="grid-2">
+            <div class="field"><label data-i="code">Kode Barang</label><input id="trfCode" placeholder="BRG-001"></div>
+            <div class="field"><label data-i="name">Nama Barang</label><input id="trfName" placeholder="Cat Tembok 10L"></div>
+            <div class="field"><label data-i="qty">Kuantitas</label><input id="trfQty" type="number" min="1" value="1"></div>
+            <div class="field"><label data-i="outlet">Outlet</label>
+              <select id="trfOutlet"></select>
+            </div>
+            <div class="field"><label>&nbsp;</label><button class="btn" onclick="addTransfer()" data-i="transfer_btn">Transfer</button></div>
+          </div>
+          <div class="muted" id="trfHint"></div>
+        </div>
+      </section>
+
+      <!-- OUTLET CRUD -->
+      <section id="view-outlets" class="hidden">
+        <div class="panel">
+          <h3 data-i="outlet_title">Outlet</h3>
+          <div class="row" style="margin-bottom:10px">
+            <div class="field"><label data-i="outlet_code">Kode Outlet</label><input id="outCode" placeholder="OT-01"></div>
+            <div class="field"><label data-i="outlet_name">Nama Outlet</label><input id="outName" placeholder="Outlet Utama"></div>
+            <div class="field"><label>&nbsp;</label><button class="btn" onclick="addOutlet()" data-i="add">Tambah</button></div>
+          </div>
+
+          <div class="table-wrap">
+            <table id="tblOutlets">
+              <thead><tr>
+                <th data-i="outlet_code">Kode</th><th data-i="outlet_name">Nama</th><th>Aksi</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section id="view-reports" class="hidden">
+        <div class="panel">
+          <h3 data-i="report_title">Laporan Transaksi</h3>
+          <div class="row" style="margin-bottom:10px">
+            <div class="field"><label data-i="type">Jenis</label>
+              <select id="repType">
+                <option value="all" data-i="all">Semua</option>
+                <option value="receipt" data-i="menu_receipt">Penerimaan</option>
+                <option value="transfer" data-i="menu_transfer">Transfer</option>
+              </select>
+            </div>
+            <div class="field"><label data-i="search">Pencarian</label><input id="repSearch" placeholder="Cari kode/nama/outlet"></div>
+            <div class="tools right">
+              <button class="btn ghost" onclick="exportCSV()">Export CSV</button>
+              <button class="btn" onclick="window.print()">Print to PDF</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table id="tblReports">
+              <thead><tr>
+                <th data-i="date">Tanggal</th>
+                <th data-i="type">Jenis</th>
+                <th data-i="code">Kode</th>
+                <th data-i="name">Nama</th>
+                <th data-i="qty">Qty</th>
+                <th data-i="outlet">Outlet</th>
+                <th data-i="note">Keterangan</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="panel" style="margin-top:14px">
+            <h3 data-i="expense_title">Ringkasan Pengeluaran ke Outlet</h3>
+            <div class="table-wrap">
+              <table id="tblExpenses">
+                <thead><tr>
+                  <th data-i="outlet">Outlet</th>
+                  <th data-i="qty">Total Qty</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="hidden">
+        <div class="panel">
+          <h3 data-i="settings_title">Pengaturan</h3>
+          <div class="grid-2">
+            <div class="field"><label data-i="username">Username</label><input id="setUser" class="user-input"></div>
+            <div class="field"><label data-i="password">Password</label><input id="setPass" type="password" class="user-input"></div>
+            <div class="field row" style="align-items:center">
+              <input id="setWidgets" type="checkbox" checked style="width:18px;height:18px">
+              <label for="setWidgets" data-i="show_widgets" style="margin-left:6px">Tampilkan Widget Dashboard</label>
+            </div>
+            <div class="field"><button class="btn" onclick="saveSettings()" data-i="save">Simpan</button></div>
+          </div>
+          <div id="saveNote" class="muted" style="margin-top:10px"></div>
+        </div>
+      </section>
+
     </main>
+  </div>
 
-    <script>
-        // Toggle Sidebar
-        function toggleSidebar() {
-            document.querySelector(".sidebar").classList.toggle("collapsed");
-        }
+<script>
+/* ---------- Data Layer (localStorage) ---------- */
+const DB = {
+  key: 'whm.v1',
+  init(){
+    if(!localStorage.getItem(this.key)){
+      const seed = {
+        user:{username:'admin', password:'admin', showWidgets:true, lang:'id'},
+        outlets:[{code:'OT-01', name:'Outlet Utama'}],
+        inventory:[],             // {code,name,qty}
+        receipts:[],              // {date, code, name, qty, note}
+        transfers:[]              // {date, code, name, qty, outlet, note}
+      };
+      localStorage.setItem(this.key, JSON.stringify(seed));
+    }
+  },
+  load(){ return JSON.parse(localStorage.getItem(this.key)); },
+  save(data){ localStorage.setItem(this.key, JSON.stringify(data)); }
+};
+DB.init();
 
-        // Submenu Dropdown
-        document.querySelectorAll(".has-submenu").forEach(menu => {
-            menu.addEventListener("click", function() {
-                this.parentElement.classList.toggle("open");
-            });
-        });
+/* ---------- i18n ---------- */
+const I18N = {
+  en:{
+    nav:'Navigation',
+    menu_dashboard:'Dashboard', menu_opsi:'Operations', menu_master:'Master Data',
+    menu_receipt:'Goods Receipt', menu_transfer:'Transfer to Outlet', menu_outlet:'Outlets',
+    menu_reports:'Reports', menu_settings:'Settings',
+    w_items:'Item Types', w_stock:'Total Stock', w_receipts:'Receipts', w_transfers:'Transfers', w_outlets:'Outlets', w_users:'Users',
+    quick_actions:'Quick Actions',
+    receipt_title:'Goods Receipt', code:'Item Code', name:'Item Name', qty:'Quantity', add:'Add',
+    inventory:'Inventory',
+    transfer_title:'Transfer to Outlet', outlet:'Outlet', transfer_btn:'Transfer',
+    outlet_title:'Outlets', outlet_code:'Outlet Code', outlet_name:'Outlet Name',
+    report_title:'Transaction History', search:'Search', type:'Type', all:'All',
+    date:'Date', note:'Note', expense_title:'Expense Summary to Outlet',
+    settings_title:'Settings', username:'Username', password:'Password', show_widgets:'Show Dashboard Widgets', save:'Save',
+  },
+  id:{
+    nav:'Navigasi',
+    menu_dashboard:'Dashboard', menu_opsi:'Operasional', menu_master:'Master Data',
+    menu_receipt:'Penerimaan Barang', menu_transfer:'Transfer ke Outlet', menu_outlet:'Outlet',
+    menu_reports:'Laporan', menu_settings:'Pengaturan',
+    w_items:'Jenis Barang', w_stock:'Total Stok', w_receipts:'Penerimaan', w_transfers:'Transfer', w_outlets:'Outlet', w_users:'Pengguna',
+    quick_actions:'Aksi Cepat',
+    receipt_title:'Penerimaan Barang', code:'Kode Barang', name:'Nama Barang', qty:'Kuantitas', add:'Tambah',
+    inventory:'Inventori',
+    transfer_title:'Transfer Barang ke Outlet', outlet:'Outlet', transfer_btn:'Transfer',
+    outlet_title:'Outlet', outlet_code:'Kode Outlet', outlet_name:'Nama Outlet',
+    report_title:'Laporan Transaksi', search:'Pencarian', type:'Jenis', all:'Semua',
+    date:'Tanggal', note:'Keterangan', expense_title:'Ringkasan Pengeluaran ke Outlet',
+    settings_title:'Pengaturan', username:'Username', password:'Password', show_widgets:'Tampilkan Widget Dashboard', save:'Simpan',
+  }
+};
+function applyLang(lang){
+  const dict = I18N[lang] || I18N.id;
+  document.querySelectorAll('[data-i]').forEach(el=>{
+    const key = el.getAttribute('data-i');
+    if(dict[key]) el.textContent = dict[key];
+  });
+  document.documentElement.lang = lang;
+  const db = DB.load(); db.user.lang = lang; DB.save(db);
+}
 
-        // Search & Filter Functionality
-        const searchInput = document.getElementById("searchInput");
-        const filterStok = document.getElementById("filterStok");
-        const rows = document.querySelectorAll("#stockTable tbody tr");
+/* ---------- Navigation & Views ---------- */
+const views = ['dashboard','receipt','transfer','outlets','reports','settings'];
+function showView(name){
+  views.forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('hidden', v!==name);
+    document.querySelectorAll(`[data-view="${v}"]`).forEach(a=>a.classList.toggle('active', v===name));
+  });
+  if(name==='reports'){ renderReports(); renderExpenses(); }
+  if(name==='outlets'){ renderOutlets(); }
+  if(name==='receipt'){ renderInventory(); }
+  if(name==='transfer'){ populateOutletSelect(); }
+  if(name==='dashboard'){ refreshWidgets(); }
+  location.hash = name;
+}
+document.getElementById('nav').addEventListener('click', (e)=>{
+  const a = e.target.closest('a[data-view]');
+  if(a){ e.preventDefault(); showView(a.dataset.view); }
+});
+document.querySelectorAll('[data-toggle="submenu"]').forEach(a=>{
+  a.addEventListener('click', ()=> a.parentElement.classList.toggle('open'));
+});
+document.getElementById('toggleSidebarBtn').onclick = ()=>{
+  document.getElementById('sidebar').classList.toggle('show');
+};
 
-        function filterTable() {
-            const search = searchInput.value.toLowerCase();
-            const filter = filterStok.value;
+/* ---------- Inventory Ops ---------- */
+function addReceipt(){
+  const code = val('rcpCode'), name = val('rcpName'), qty = +val('rcpQty')||0;
+  if(!code||!name||qty<=0) return alert('Lengkapi data penerimaan.');
+  const db = DB.load();
+  const item = db.inventory.find(i=>i.code===code) || {code,name,qty:0};
+  item.name = name; item.qty += qty;
+  if(!db.inventory.some(i=>i.code===code)) db.inventory.push(item);
+  db.receipts.push({date:new Date().toISOString(), code,name,qty, note:'Receipt'});
+  DB.save(db);
+  clear('rcpQty'); renderInventory(); refreshWidgets();
+  alert('Penerimaan tersimpan.');
+}
+function renderInventory(){
+  const tbody = sel('#tblInventory tbody'); tbody.innerHTML='';
+  const {inventory} = DB.load();
+  inventory.forEach(i=>{
+    const badge = i.qty<=5?'b-danger':(i.qty<15?'b-warn':'b-ok');
+    tr(tbody,[i.code,i.name,`<span class="badge ${badge}">${i.qty}</span>`]);
+  });
+}
 
-            rows.forEach(row => {
-                const nama = row.cells[2].textContent.toLowerCase();
-                const id = row.cells[1].textContent.toLowerCase();
-                const stok = parseInt(row.cells[4].textContent);
+/* ---------- Transfer Ops ---------- */
+function populateOutletSelect(){
+  const db = DB.load(); const s = document.getElementById('trfOutlet'); s.innerHTML='';
+  db.outlets.forEach(o=>{
+    const opt = document.createElement('option'); opt.value=o.code; opt.textContent=`${o.code} — ${o.name}`; s.appendChild(opt);
+  });
+  document.getElementById('trfHint').textContent = db.outlets.length? '' : 'Belum ada outlet. Tambahkan dulu di menu Outlet.';
+}
+function addTransfer(){
+  const code = val('trfCode'), name = val('trfName'), qty = +val('trfQty')||0, outlet = document.getElementById('trfOutlet').value;
+  if(!code||!name||qty<=0||!outlet) return alert('Lengkapi data transfer.');
+  const db = DB.load();
+  const item = db.inventory.find(i=>i.code===code);
+  if(!item || item.qty<qty) return alert('Stok tidak cukup / barang belum ada.');
+  item.name = name; item.qty -= qty;
+  db.transfers.push({date:new Date().toISOString(), code,name,qty,outlet, note:'Transfer'});
+  DB.save(db);
+  clear('trfQty'); renderInventory(); refreshWidgets();
+  alert('Transfer tersimpan.');
+}
 
-                let stokCondition = true;
-                if (filter === "safe") stokCondition = stok >= 15;
-                else if (filter === "low") stokCondition = stok >= 6 && stok < 15;
-                else if (filter === "critical") stokCondition = stok <= 5;
+/* ---------- Outlet CRUD ---------- */
+function addOutlet(){
+  const code = val('outCode'), name = val('outName');
+  if(!code||!name) return alert('Kode/Nama outlet wajib.');
+  const db = DB.load();
+  if(db.outlets.some(o=>o.code===code)) return alert('Kode outlet sudah ada.');
+  db.outlets.push({code,name}); DB.save(db);
+  clear('outCode'); clear('outName'); renderOutlets(); populateOutletSelect(); refreshWidgets();
+}
+function editOutlet(code){
+  const name = prompt('Ubah nama outlet:');
+  if(name===null) return;
+  const db = DB.load(); const o = db.outlets.find(x=>x.code===code); if(!o) return;
+  o.name = name || o.name; DB.save(db); renderOutlets(); populateOutletSelect();
+}
+function deleteOutlet(code){
+  if(!confirm('Hapus outlet ini?')) return;
+  const db = DB.load(); db.outlets = db.outlets.filter(o=>o.code!==code); DB.save(db);
+  renderOutlets(); populateOutletSelect(); refreshWidgets();
+}
+function renderOutlets(){
+  const tbody = sel('#tblOutlets tbody'); tbody.innerHTML='';
+  DB.load().outlets.forEach(o=>{
+    tr(tbody,[
+      o.code,o.name,
+      `<div class="tools">
+         <button class="btn ghost" onclick="editOutlet('${o.code}')">Edit</button>
+         <button class="btn secondary" onclick="deleteOutlet('${o.code}')">Delete</button>
+       </div>`
+    ]);
+  });
+}
 
-                const matchesSearch = nama.includes(search) || id.includes(search);
-                row.style.display = matchesSearch && stokCondition ? "" : "none";
-            });
-        }
+/* ---------- Reports ---------- */
+function renderReports(){
+  const tbody = sel('#tblReports tbody'); tbody.innerHTML='';
+  const {receipts, transfers} = DB.load();
+  let rows = [
+    ...receipts.map(r=>({...r,type:'receipt'})),
+    ...transfers.map(t=>({...t,type:'transfer'}))
+  ].sort((a,b)=> new Date(b.date)-new Date(a.date));
 
-        searchInput.addEventListener("input", filterTable);
-        filterStok.addEventListener("change", filterTable);
+  // filter
+  const tp = val('repType'); const q = val('repSearch').toLowerCase();
+  if(tp!=='all') rows = rows.filter(r=>r.type===tp);
+  if(q) rows = rows.filter(r=>(r.code+r.name+(r.outlet||'')).toLowerCase().includes(q));
 
-        // Row Click Highlight
-        rows.forEach(row => {
-            row.addEventListener("click", () => {
-                rows.forEach(r => r.classList.remove("selected"));
-                row.classList.add("selected");
-            });
-        });
-    </script>
+  rows.forEach(r=>{
+    tr(tbody,[
+      fmtDate(r.date),
+      r.type==='receipt' ? txt('menu_receipt') : txt('menu_transfer'),
+      r.code, r.name, r.qty, (r.outlet||'-'), (r.note||'-')
+    ]);
+  });
+}
+function renderExpenses(){
+  const tbody = sel('#tblExpenses tbody'); tbody.innerHTML='';
+  const {transfers,outlets} = DB.load();
+  const agg = {};
+  transfers.forEach(t=>{ agg[t.outlet] = (agg[t.outlet]||0) + Number(t.qty); });
+  (outlets||[]).forEach(o=>{
+    tr(tbody,[`${o.code} — ${o.name}`, agg[o.code]||0]);
+  });
+}
+function exportCSV(){
+  // Build CSV from report table
+  const headers = Array.from(sel('#tblReports thead tr').children).map(th=>th.textContent.trim());
+  const lines = [headers.join(',')];
+  Array.from(sel('#tblReports tbody').children).forEach(trEl=>{
+    const cols = Array.from(trEl.children).map(td=>escapeCSV(td.textContent.trim()));
+    lines.push(cols.join(','));
+  });
+  const blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url;
+  a.download='transactions.csv'; a.click(); URL.revokeObjectURL(url);
+}
+function escapeCSV(s){ return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
+
+/* ---------- Settings ---------- */
+function saveSettings(){
+  const db = DB.load();
+  const u = val('setUser').trim(); const p = val('setPass').trim();
+  if(u) db.user.username = u;
+  if(p) db.user.password = p; // (untuk demo; produksi -> hash)
+  db.user.showWidgets = sel('#setWidgets').checked;
+  DB.save(db);
+  sel('#widgets').style.display = db.user.showWidgets ? '' : 'none';
+  sel('#saveNote').textContent = 'Pengaturan disimpan.';
+  refreshUser();
+}
+
+/* ---------- Helpers & UI Refresh ---------- */
+function refreshWidgets(){
+  const db = DB.load();
+  sel('#wItems').textContent = db.inventory.length;
+  sel('#wStock').textContent = db.inventory.reduce((a,b)=>a + Number(b.qty||0),0);
+  sel('#wReceipts').textContent = db.receipts.length;
+  sel('#wTransfers').textContent = db.transfers.length;
+  sel('#wOutlets').textContent = db.outlets.length;
+}
+function refreshUser(){
+  const {user} = DB.load();
+  sel('#currentUser').textContent = `👤 ${user.username}`;
+  sel('#widgets').style.display = user.showWidgets ? '' : 'none';
+  sel('#lang').value = user.lang || 'id';
+}
+function populateAll(){
+  refreshWidgets(); renderInventory(); renderOutlets(); populateOutletSelect(); renderReports(); renderExpenses(); refreshUser();
+  applyLang(DB.load().user.lang || 'id');
+}
+function fmtDate(iso){ const d = new Date(iso); return d.toLocaleString(); }
+function val(id){ return document.getElementById(id).value; }
+function clear(id){ document.getElementById(id).value=''; }
+function sel(q){ return document.querySelector(q); }
+function tr(tbody, cells){
+  const tr = document.createElement('tr');
+  cells.forEach(c=>{
+    const td = document.createElement('td'); td.innerHTML = c; tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+}
+function txt(key){ const lang = DB.load().user.lang||'id'; return (I18N[lang]||{})[key] || key; }
+
+/* ---------- Events ---------- */
+document.getElementById('lang').addEventListener('change', e=>applyLang(e.target.value));
+document.getElementById('repType').addEventListener('change', renderReports);
+document.getElementById('repSearch').addEventListener('input', renderReports);
+window.addEventListener('hashchange', ()=>{
+  const name = location.hash.replace('#','') || 'dashboard';
+  if(views.includes(name)) showView(name);
+});
+document.getElementById('year').textContent = new Date().getFullYear();
+
+/* ---------- Boot ---------- */
+populateAll();
+showView((location.hash||'#dashboard').replace('#',''));
+
+/* Seed demo data on first run (optional) */
+(function seedDemo(){
+  const db = DB.load();
+  if(db.receipts.length===0 && db.inventory.length===0){
+    db.receipts.push(
+      {date:new Date(Date.now()-86400000*2).toISOString(),code:'BRG-001',name:'Cat Tembok 10L',qty:12,note:'Receipt'},
+      {date:new Date(Date.now()-86400000).toISOString(),code:'BRG-002',name:'Amplas 400',qty:30,note:'Receipt'}
+    );
+    db.inventory.push({code:'BRG-001',name:'Cat Tembok 10L',qty:12},{code:'BRG-002',name:'Amplas 400',qty:30});
+    db.transfers.push({date:new Date().toISOString(),code:'BRG-002',name:'Amplas 400',qty:5,outlet:'OT-01',note:'Transfer'});
+    DB.save(db);
+    populateAll();
+  }
+})();
+</script>
 </body>
 </html>
