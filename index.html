@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Warehouse Manager — Single File</title>
+<title>Warehouse Manager — Single File (Google Sheets)</title>
 <style>
   :root{
     --primary:#4e73df; --ok:#1cc88a; --warn:#f6c23e; --danger:#e74a3b;
@@ -18,6 +18,7 @@
   .controls{display:flex;gap:8px;align-items:center}
   .btn{border:0;padding:8px 12px;border-radius:10px;background:var(--primary);color:#fff;cursor:pointer}
   .btn.ghost{background:transparent;border:1px solid var(--primary);color:var(--primary)}
+  .btn.secondary{background:#0f1724; opacity:.8}
   .control{padding:7px 10px;border-radius:8px;border:1px solid #e6eefc;background:#fff}
 
   /* Sidebar */
@@ -120,7 +121,7 @@
   <section id="view-dashboard" class="view">
     <div class="cards" id="widgets">
       <div class="card"><div class="label">Jenis Barang</div><div class="value" id="wItems">0</div></div>
-      <div class="card"><div class="label">Total Stok</div><div class="value" id="wStock">0</div></div>
+      <div class="card"><div class="label">Total Stok (hasil agregasi)</div><div class="value" id="wStock">0</div></div>
       <div class="card"><div class="label">Total Penerimaan</div><div class="value" id="wReceipts">0</div></div>
       <div class="card"><div class="label">Total Transfer</div><div class="value" id="wTransfers">0</div></div>
       <div class="card"><div class="label">Outlet</div><div class="value" id="wOutlets">0</div></div>
@@ -134,6 +135,9 @@
         <button class="btn ghost" onclick="showView('items')">Master Barang</button>
         <button class="btn ghost" onclick="showView('reports')">Laporan</button>
       </div>
+      <div class="muted" style="margin-top:8px">
+        *Stok dihitung dari <b>MasterBarang.Qty (jika ada)</b> + ΣPenerimaan − ΣTransfer
+      </div>
     </div>
   </section>
 
@@ -145,12 +149,13 @@
         <div class="field"><label>Kode Barang</label><input id="rcpCode" placeholder="BRG-001"></div>
         <div class="field"><label>Nama Barang</label><input id="rcpName" placeholder="Cat Tembok 10L"></div>
         <div class="field"><label>Kuantitas</label><input id="rcpQty" type="number" min="1" value="1"></div>
+        <div class="field"><label>Keterangan</label><input id="rcpNote" placeholder="Nota/Supplier (opsional)"></div>
         <div style="align-self:end"><button class="btn" onclick="addReceipt()">Tambah Penerimaan</button></div>
       </div>
     </div>
 
     <div class="panel">
-      <h3>Daftar Inventori</h3>
+      <h3>Daftar Inventori (Agregasi)</h3>
       <div class="table-wrap">
         <table id="tblInventory"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Aksi</th></tr></thead><tbody></tbody></table>
       </div>
@@ -166,6 +171,7 @@
         <div class="field"><label>Nama Barang</label><input id="trfName" placeholder="Cat Tembok 10L"></div>
         <div class="field"><label>Kuantitas</label><input id="trfQty" type="number" min="1" value="1"></div>
         <div class="field"><label>Outlet</label><select id="trfOutlet"></select></div>
+        <div class="field"><label>Keterangan</label><input id="trfNote" placeholder="(opsional)"></div>
         <div style="align-self:end"><button class="btn" onclick="addTransfer()">Transfer</button></div>
       </div>
     </div>
@@ -185,15 +191,17 @@
       <div class="row" style="margin-top:10px;gap:8px">
         <div class="field" style="flex:1"><label>Kode</label><input id="itCode"></div>
         <div class="field" style="flex:2"><label>Nama</label><input id="itName"></div>
+        <div class="field" style="flex:1"><label>Qty Awal (opsional)</label><input id="itQty" type="number" min="0" value="0"></div>
         <div style="align-self:end"><button class="btn" onclick="addItem()">Tambah Barang</button></div>
       </div>
     </div>
 
     <div class="panel">
-      <h3>Daftar Barang</h3>
+      <h3>Daftar Barang (dari MasterBarang)</h3>
       <div class="table-wrap">
-        <table id="tblItems"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+        <table id="tblItems"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty Awal</th><th>Aksi</th></tr></thead><tbody></tbody></table>
       </div>
+      <div class="muted" style="margin-top:6px">Edit/Hapus dari MasterBarang membutuhkan endpoint update/delete. Saat ini hanya <b>Tambah</b>.</div>
     </div>
   </section>
 
@@ -213,6 +221,7 @@
       <div class="table-wrap">
         <table id="tblOutlets"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Aksi</th></tr></thead><tbody></tbody></table>
       </div>
+      <div class="muted" style="margin-top:6px">Edit/Hapus outlet membutuhkan endpoint update/delete. Saat ini hanya <b>Tambah</b>.</div>
     </div>
   </section>
 
@@ -274,26 +283,305 @@
 </div>
 
 <script>
-/* ===== data layer ===== */
-const DB_KEY = 'whm.final.v1';
-function dbInit(){
-  if(!localStorage.getItem(DB_KEY)){
-    const seed = {
-      user:{username:'admin',password:'admin',showWidgets:true,lang:'id'},
-      outlets:[{code:'OT-01',name:'Outlet Utama'}],
-      inventory:[{code:'BRG-001',name:'Cat Tembok 10L',qty:12},{code:'BRG-002',name:'Amplas 400',qty:30}],
-      receipts:[{id:uid(),date:new Date(Date.now()-86400000*2).toISOString(),code:'BRG-001',name:'Cat Tembok 10L',qty:12,note:'Seed'}],
-      transfers:[{id:uid(),date:new Date().toISOString(),code:'BRG-002',name:'Amplas 400',qty:5,outlet:'OT-01',note:'Seed'}]
-    };
-    localStorage.setItem(DB_KEY,JSON.stringify(seed));
-  }
+/* ====== KONFIGURASI GOOGLE APPS SCRIPT ====== */
+// Gunakan endpoint Web App milik Anda (sudah FIX dari pesan Anda)
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTPodzzq--ouz2WZVaclGrVrl_9FQumAbFLDzyXiIXMZo-Oz67r38HFiODpjMzoxWt/exec";
+
+/* ====== STATE (di-memori, berasal dari Google Sheets) ====== */
+let state = {
+  master: [],     // array of {Kode, Nama, Qty}
+  outlets: [],    // array of {Kode, Nama}
+  receipts: [],   // array of {Tanggal, Kode, Nama, Qty, Note}
+  transfers: []   // array of {Tanggal, Kode, Nama, Qty, Outlet, Note}
+};
+
+/* ====== UTIL: Fetch Google Sheets ====== */
+async function fetchSheet(sheetName){
+  const res = await fetch(`${SCRIPT_URL}?sheet=${encodeURIComponent(sheetName)}`);
+  const json = await res.json();
+  if(json.error){ throw new Error(json.error); }
+  const rows = json.data || json; // dukung {data:[...]} atau [...]
+  if(!rows || rows.length === 0) return [];
+  const [header, ...body] = rows;
+  const idx = Object.fromEntries(header.map((h,i)=>[String(h).trim(), i]));
+  return body.map(r=>({
+    get: k => r[idx[k]] ?? "",
+    row: r,
+    asObject: () => Object.fromEntries(Object.keys(idx).map(k=>[k, r[idx[k]]]))
+  }));
 }
-function dbLoad(){ return JSON.parse(localStorage.getItem(DB_KEY)); }
-function dbSave(d){ localStorage.setItem(DB_KEY,JSON.stringify(d)); }
+
+async function appendRow(sheetName, rowArray){
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sheet: sheetName, row: rowArray })
+  });
+  const json = await res.json();
+  if(json.error){ throw new Error(json.error); }
+  return json;
+}
+
+/* ====== HELPERS ====== */
+function sel(id){ return document.getElementById(id); }
+function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function uid(){ return 'id'+Math.random().toString(36).slice(2,9); }
 
-/* ===== UI helpers ===== */
-function sel(id){ return document.getElementById(id); }
+// Build dictionary stok agregasi: opening from MasterBarang.Qty (opsional) + Σ receipts - Σ transfers
+function buildInventory(){
+  const open = {}; // Kode -> {code,name,qty}
+  state.master.forEach(obj => {
+    const o = obj.asObject();
+    const code = String(o.Kode||o.kode||"").trim();
+    if(!code) return;
+    const name = String(o.Nama||o.nama||"").trim();
+    const oq = Number(o.Qty||o.qty||0) || 0;
+    open[code] = { code, name, qty: oq };
+  });
+
+  const plus = {}; // receipts
+  state.receipts.forEach(x=>{
+    const o = x.asObject();
+    const code = String(o.Kode||o.kode||"").trim();
+    const name = String(o.Nama||o.nama||"").trim();
+    const q = Number(o.Qty||o.qty||0) || 0;
+    if(!code) return;
+    if(!open[code]) open[code] = { code, name, qty: 0 };
+    plus[code] = (plus[code]||0) + q;
+  });
+
+  const minus = {}; // transfers
+  state.transfers.forEach(x=>{
+    const o = x.asObject();
+    const code = String(o.Kode||o.kode||"").trim();
+    const q = Number(o.Qty||o.qty||0) || 0;
+    if(!code) return;
+    minus[code] = (minus[code]||0) + q;
+  });
+
+  const inv = Object.values(open);
+  // include codes that only exist in receipts/transfers
+  const codes = new Set([...Object.keys(open), ...Object.keys(plus), ...Object.keys(minus)]);
+  const out = [];
+  codes.forEach(code=>{
+    const name = open[code]?.name || // from master
+      (state.receipts.find(x=> (x.asObject().Kode||x.asObject().kode||"").trim()===code)?.asObject().Nama) ||
+      (state.transfers.find(x=> (x.asObject().Kode||x.asObject().kode||"").trim()===code)?.asObject().Nama) || '';
+    const base = open[code]?.qty || 0;
+    const q = base + (plus[code]||0) - (minus[code]||0);
+    out.push({ code, name, qty: q });
+  });
+  // sort by code
+  out.sort((a,b)=> a.code.localeCompare(b.code));
+  return out;
+}
+
+/* ====== RENDER ====== */
+function refreshWidgets(){
+  const inv = buildInventory();
+  sel('wItems').textContent = inv.length;
+  sel('wStock').textContent = inv.reduce((s,i)=> s + Number(i.qty||0),0);
+  sel('wReceipts').textContent = state.receipts.length;
+  sel('wTransfers').textContent = state.transfers.length;
+  sel('wOutlets').textContent = state.outlets.length;
+  sel('wUsers').textContent = 1;
+  sel('currentUser').textContent = '👤 ' + (localStorage.getItem('wm.user') || 'admin');
+  sel('setUser').value = localStorage.getItem('wm.user') || '';
+  sel('setWidgets').checked = true;
+  sel('lang').value = localStorage.getItem('wm.lang') || 'id';
+  sel('year').textContent = new Date().getFullYear();
+}
+
+function renderInventory(){
+  const tbody = sel('tblInventory').querySelector('tbody'); tbody.innerHTML = '';
+  const inv = buildInventory();
+  inv.forEach((it,i)=>{
+    const tr = document.createElement('tr');
+    const bc = it.qty <=5 ? 'b-danger' : (it.qty < 15 ? 'b-warn' : 'b-ok');
+    tr.innerHTML = `<td>${i+1}</td><td>${it.code}</td><td>${escapeHtml(it.name)}</td><td><span class="badge ${bc}">${it.qty}</span></td>
+      <td><div class="tools"><button class="btn ghost" onclick="alert('Edit item membutuhkan endpoint update - belum tersedia')">Edit</button><button class="btn secondary" onclick="alert('Hapus item membutuhkan endpoint delete - belum tersedia')">Hapus</button></div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTransfers(){
+  const tbody = sel('tblTransfers').querySelector('tbody'); tbody.innerHTML='';
+  const rows = state.transfers.slice();
+  // sort desc by Tanggal if exists
+  rows.sort((a,b)=>{
+    const da = new Date(a.asObject().Tanggal || a.asObject().Date || 0).getTime();
+    const db = new Date(b.asObject().Tanggal || b.asObject().Date || 0).getTime();
+    return db - da;
+  });
+  rows.forEach((t,i)=>{
+    const o = t.asObject();
+    const dt = o.Tanggal || o.Date || '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${dt ? new Date(dt).toLocaleString() : '-'}</td><td>${o.Kode||''}</td><td>${escapeHtml(o.Nama||'')}</td><td>${o.Qty||0}</td><td>${o.Outlet||'-'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderItems(){
+  const tbody = sel('tblItems').querySelector('tbody'); tbody.innerHTML='';
+  const rows = state.master.slice();
+  rows.forEach((x,i)=>{
+    const o = x.asObject();
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${o.Kode||''}</td><td>${escapeHtml(o.Nama||'')}</td><td>${o.Qty||0}</td>
+      <td><div class="tools"><button class="btn ghost" onclick="alert('Edit butuh endpoint update - belum tersedia')">Edit</button><button class="btn secondary" onclick="alert('Hapus butuh endpoint delete - belum tersedia')">Hapus</button></div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderOutlets(){
+  const tbody = sel('tblOutlets').querySelector('tbody'); tbody.innerHTML='';
+  const rows = state.outlets.slice();
+  rows.forEach((x,i)=>{
+    const o = x.asObject();
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${o.Kode||''}</td><td>${escapeHtml(o.Nama||'')}</td><td><div class="tools"><button class="btn ghost" onclick="alert('Edit butuh endpoint update - belum tersedia')">Edit</button><button class="btn secondary" onclick="alert('Hapus butuh endpoint delete - belum tersedia')">Hapus</button></div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderReports(){
+  const tbody = sel('tblReports').querySelector('tbody'); tbody.innerHTML='';
+  // koleksi rows gabungan
+  const r = state.receipts.map(x=>({ type:'receipt', ...x.asObject() }));
+  const t = state.transfers.map(x=>({ type:'transfer', ...x.asObject() }));
+  const rows = [...r, ...t];
+  // sort desc by date
+  rows.sort((a,b)=> new Date(b.Tanggal||b.Date||0) - new Date(a.Tanggal||a.Date||0));
+  const tf = sel('repType').value;
+  const q = sel('repSearch').value.trim().toLowerCase();
+  let out = rows.filter(r=> tf==='all' ? true : r.type===tf);
+  if(q) out = out.filter(r=>(`${r.Kode||''} ${r.Nama||''} ${r.Outlet||''}`).toLowerCase().includes(q));
+  out.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${r.Tanggal? new Date(r.Tanggal).toLocaleString(): '-'}</td><td>${r.type}</td><td>${r.Kode||''}</td><td>${escapeHtml(r.Nama||'')}</td><td>${r.Qty||0}</td><td>${r.Outlet||'-'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderExpenses(){
+  const tbody = sel('tblExpenses').querySelector('tbody'); tbody.innerHTML='';
+  const agg = {};
+  state.transfers.forEach(t=>{ const o=t.asObject(); const k=o.Outlet||'-'; agg[k]=(agg[k]||0)+ (Number(o.Qty||0)||0); });
+  // tampilkan untuk semua outlet yang ada di master outlet juga
+  const outlets = new Set([ ...Object.keys(agg), ...state.outlets.map(o=>o.asObject().Kode) ]);
+  Array.from(outlets).forEach(k=>{
+    const name = state.outlets.find(o=>o.asObject().Kode===k)?.asObject().Nama || k;
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${k} — ${escapeHtml(name)}</td><td>${agg[k]||0}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function exportCSV(){
+  const rows = [];
+  const headers = ['Tanggal','Jenis','Kode','Nama','Qty','Outlet'];
+  rows.push(headers.join(','));
+  sel('tblReports').querySelectorAll('tbody tr').forEach(tr=>{
+    const cols = Array.from(tr.children).slice(1).map(td=>escapeCSV(td.textContent.trim()));
+    rows.push(cols.join(','));
+  });
+  const blob = new Blob([rows.join('\n')],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='reports.csv'; a.click(); URL.revokeObjectURL(url);
+}
+function escapeCSV(s){ return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
+
+/* ====== OPERASIONAL (WRITE) ====== */
+async function addReceipt(){
+  try{
+    const code = sel('rcpCode').value.trim();
+    const name = sel('rcpName').value.trim();
+    const qty = Number(sel('rcpQty').value)||0;
+    const note = sel('rcpNote').value.trim();
+    if(!code||!name||qty<=0) return alert('Lengkapi data penerimaan.');
+    const row = [new Date().toISOString(), code, name, qty, note]; // Header yang disarankan: Tanggal,Kode,Nama,Qty,Note
+    await appendRow('Penerimaan', row);
+    sel('rcpCode').value=''; sel('rcpName').value=''; sel('rcpQty').value=1; sel('rcpNote').value='';
+    await loadAll();
+    alert('✅ Penerimaan disimpan.');
+  }catch(err){ alert('Gagal simpan penerimaan: '+err.message); }
+}
+
+async function addTransfer(){
+  try{
+    const code = sel('trfCode').value.trim();
+    const name = sel('trfName').value.trim();
+    const qty = Number(sel('trfQty').value)||0;
+    const outlet = sel('trfOutlet').value;
+    const note = sel('trfNote').value.trim();
+    if(!code||!name||qty<=0||!outlet) return alert('Lengkapi data transfer.');
+    const inv = buildInventory();
+    const current = inv.find(x=>x.code===code)?.qty || 0;
+    if(current < qty) return alert('Stok tidak cukup. Stok tersedia: '+current);
+    const row = [new Date().toISOString(), code, name, qty, outlet, note]; // Header disarankan: Tanggal,Kode,Nama,Qty,Outlet,Note
+    await appendRow('Transfer', row);
+    sel('trfCode').value=''; sel('trfName').value=''; sel('trfQty').value=1; sel('trfNote').value='';
+    await loadAll();
+    alert('✅ Transfer disimpan.');
+  }catch(err){ alert('Gagal simpan transfer: '+err.message); }
+}
+
+async function addItem(){
+  try{
+    const code = sel('itCode').value.trim();
+    const name = sel('itName').value.trim();
+    const qty0 = Number(sel('itQty').value)||0;
+    if(!code||!name) return alert('Isi kode dan nama.');
+    // Cek duplikasi berdasarkan MasterBarang saat ini
+    const exists = state.master.some(x=> (x.asObject().Kode||'').trim()===code);
+    if(exists) return alert('Kode sudah ada di MasterBarang.');
+    const row = [code, name, qty0]; // Header disarankan: Kode,Nama,Qty
+    await appendRow('MasterBarang', row);
+    sel('itCode').value=''; sel('itName').value=''; sel('itQty').value=0;
+    await loadAll();
+    alert('✅ Barang ditambahkan.');
+  }catch(err){ alert('Gagal tambah barang: '+err.message); }
+}
+
+async function addOutlet(){
+  try{
+    const code = sel('outCode').value.trim();
+    const name = sel('outName').value.trim();
+    if(!code||!name) return alert('Isi kode & nama');
+    const exists = state.outlets.some(x=> (x.asObject().Kode||'').trim()===code);
+    if(exists) return alert('Kode outlet sudah ada');
+    const row = [code, name]; // Header disarankan: Kode,Nama
+    await appendRow('Outlet', row);
+    sel('outCode').value=''; sel('outName').value='';
+    await loadAll();
+    alert('✅ Outlet ditambahkan.');
+  }catch(err){ alert('Gagal tambah outlet: '+err.message); }
+}
+
+function populateOutletSelect(){
+  const selEl = sel('trfOutlet'); selEl.innerHTML = '';
+  state.outlets.forEach(o=>{
+    const obj = o.asObject();
+    const opt = document.createElement('option');
+    opt.value = obj.Kode || '';
+    opt.textContent = `${obj.Kode||''} — ${obj.Nama||''}`;
+    selEl.appendChild(opt);
+  });
+}
+
+/* ====== SETTINGS (LOCAL ONLY) ====== */
+function saveSettings(){
+  const u = sel('setUser').value.trim();
+  const p = sel('setPass').value.trim();
+  if(u) localStorage.setItem('wm.user', u);
+  if(p) localStorage.setItem('wm.pass', p);
+  localStorage.setItem('wm.lang', sel('lang').value);
+  sel('saveNote').textContent = 'Disimpan.';
+  refreshWidgets();
+}
+
+/* ====== VIEW / NAV ====== */
 function showView(name){
   const views = ['dashboard','receipt','transfer','items','outlets','reports','settings'];
   views.forEach(v=> {
@@ -311,167 +599,63 @@ function showView(name){
   location.hash = name;
 }
 
+/* ====== INIT: LOAD ALL DATA FROM SHEETS ====== */
+async function loadAll(){
+  // Ambil data paralel
+  const [master, outlets, receipts, transfers] = await Promise.all([
+    fetchSheet('MasterBarang').catch(()=>[]),
+    fetchSheet('Outlet').catch(()=>[]),
+    fetchSheet('Penerimaan').catch(()=>[]),
+    fetchSheet('Transfer').catch(()=>[])
+  ]);
+  state.master = master;
+  state.outlets = outlets;
+  state.receipts = receipts;
+  state.transfers = transfers;
+  // Render
+  refreshWidgets();
+  renderInventory();
+  renderItems();
+  renderOutlets();
+  renderTransfers();
+  renderReports();
+  renderExpenses();
+  populateOutletSelect();
+}
+
 /* ===== sidebar & nav behavior ===== */
-const menuToggle = sel('menuToggle'), sidebar = sel('sidebar');
+const menuToggle = document.getElementById('menuToggle'), sidebar = document.getElementById('sidebar');
 menuToggle.addEventListener('click', ()=> sidebar.classList.toggle('show'));
+
 document.addEventListener('click', (e)=>{
   if(window.innerWidth < 900 && !sidebar.contains(e.target) && e.target !== menuToggle) sidebar.classList.remove('show');
 });
+
 document.querySelectorAll('[data-toggle="sub"]').forEach(btn=> btn.addEventListener('click', (e)=>{
   e.preventDefault(); btn.parentElement.classList.toggle('open');
 }));
+
 document.getElementById('navList').addEventListener('click', e=>{
   const a = e.target.closest('[data-view]'); if(!a) return;
   e.preventDefault(); if(window.innerWidth<900) sidebar.classList.remove('show'); showView(a.dataset.view);
 });
 
-/* ===== widgets ===== */
-function refreshWidgets(){
-  const db = dbLoad();
-  sel('wItems').textContent = db.inventory.length;
-  sel('wStock').textContent = db.inventory.reduce((s,i)=> s + Number(i.qty||0),0);
-  sel('wReceipts').textContent = db.receipts.length;
-  sel('wTransfers').textContent = db.transfers.length;
-  sel('wOutlets').textContent = db.outlets.length;
-  sel('wUsers').textContent = 1;
-  sel('currentUser').textContent = '👤 ' + (db.user.username || 'admin');
-  sel('setUser').value = db.user.username || '';
-  sel('setWidgets').checked = db.user.showWidgets !== false;
-  sel('lang').value = db.user.lang || 'id';
-  sel('year').textContent = new Date().getFullYear();
-}
-
-/* ===== Inventory / Receipt ===== */
-function renderInventory(){
-  const tbody = sel('tblInventory').querySelector('tbody'); tbody.innerHTML = '';
-  const db = dbLoad();
-  db.inventory.forEach((it,i)=>{
-    const tr = document.createElement('tr');
-    const bc = it.qty <=5 ? 'b-danger' : (it.qty < 15 ? 'b-warn' : 'b-ok');
-    tr.innerHTML = `<td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td><span class="badge ${bc}">${it.qty}</span></td>
-      <td><div class="tools"><button class="btn ghost" onclick="openEditItem('${it.code}')">Edit</button><button class="btn secondary" onclick="deleteItem('${it.code}')">Hapus</button></div></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function addReceipt(){
-  const code = sel('rcpCode').value.trim(), name = sel('rcpName').value.trim(), qty = Number(sel('rcpQty').value) || 0;
-  if(!code || !name || qty <= 0) return alert('Lengkapi data penerimaan.');
-  const db = dbLoad();
-  let item = db.inventory.find(x=>x.code===code);
-  if(!item){ item = {code,name,qty}; db.inventory.push(item); } else { item.name = name; item.qty = Number(item.qty||0) + qty; }
-  db.receipts.push({id:uid(),date:new Date().toISOString(),code,name,qty,note:'Receipt'});
-  dbSave(db); sel('rcpCode').value=''; sel('rcpName').value=''; sel('rcpQty').value=1;
-  renderInventory(); renderItems(); refreshWidgets();
-}
-
-/* ===== Transfers ===== */
-function populateOutletSelect(){
-  const selEl = sel('trfOutlet'); selEl.innerHTML = '';
-  const db = dbLoad();
-  db.outlets.forEach(o => { const opt = document.createElement('option'); opt.value=o.code; opt.textContent = `${o.code} — ${o.name}`; selEl.appendChild(opt); });
-}
-
-function addTransfer(){
-  const code = sel('trfCode').value.trim(), name = sel('trfName').value.trim(), qty = Number(sel('trfQty').value)||0, outlet = sel('trfOutlet').value;
-  if(!code||!name||qty<=0||!outlet) return alert('Lengkapi data transfer.');
-  const db = dbLoad(); const inv = db.inventory.find(x=>x.code===code);
-  if(!inv || Number(inv.qty) < qty) return alert('Stok tidak cukup atau barang belum ada.');
-  inv.qty = Number(inv.qty) - qty;
-  db.transfers.push({id:uid(),date:new Date().toISOString(),code,name,qty,outlet,note:'Transfer'});
-  dbSave(db); renderTransfers(); renderInventory(); renderItems(); refreshWidgets();
-}
-
-function renderTransfers(){
-  const tbody = sel('tblTransfers').querySelector('tbody'); tbody.innerHTML='';
-  const db = dbLoad();
-  db.transfers.slice().reverse().forEach((t,i)=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${new Date(t.date).toLocaleString()}</td><td>${t.code}</td><td>${t.name}</td><td>${t.qty}</td><td>${t.outlet || '-'}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-/* ===== Items CRUD ===== */
-function renderItems(){
-  const tbody = sel('tblItems').querySelector('tbody'); tbody.innerHTML='';
-  const db = dbLoad();
-  db.inventory.forEach((it,i)=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${it.code}</td><td>${it.name}</td><td>${it.qty}</td>
-      <td><div class="tools"><button class="btn ghost" onclick="openEditItem('${it.code}')">Edit</button><button class="btn secondary" onclick="deleteItem('${it.code}')">Hapus</button></div></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function addItem(){
-  const code = sel('itCode').value.trim(), name = sel('itName').value.trim();
-  if(!code||!name) return alert('Isi kode dan nama.');
-  const db = dbLoad(); if(db.inventory.some(x=>x.code===code)) return alert('Kode sudah ada.');
-  db.inventory.push({code,name,qty:0}); dbSave(db); sel('itCode').value=''; sel('itName').value=''; renderItems(); renderInventory(); refreshWidgets();
-}
-
-function openEditItem(code){
-  const db = dbLoad(); const item = db.inventory.find(x=>x.code===code);
-  if(!item) return alert('Item tidak ditemukan.');
-  showModal('Edit Barang', `
-    <div class="field"><label>Kode</label><input id="editCode" value="${item.code}" disabled></div>
-    <div class="field"><label>Nama</label><input id="editName" value="${escapeHtml(item.name)}"></div>
-    <div class="field"><label>Qty</label><input id="editQty" type="number" value="${item.qty}"></div>
-  `, ()=>{
-    const db2 = dbLoad(); const it = db2.inventory.find(x=>x.code===code);
-    it.name = sel('editName').value.trim(); it.qty = Number(sel('editQty').value)||0; dbSave(db2); closeModal(); renderItems(); renderInventory(); refreshWidgets();
-  });
-}
-
-function deleteItem(code){
-  if(!confirm('Hapus barang ini?')) return;
-  const db = dbLoad(); db.inventory = db.inventory.filter(x=>x.code!==code); dbSave(db); renderItems(); renderInventory(); refreshWidgets();
-}
-
-/* ===== Outlets CRUD ===== */
-function renderOutlets(){
-  const tbody = sel('tblOutlets').querySelector('tbody'); tbody.innerHTML='';
-  const db = dbLoad();
-  db.outlets.forEach((o,i)=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${o.code}</td><td>${o.name}</td><td><div class="tools"><button class="btn ghost" onclick="openEditOutlet('${o.code}')">Edit</button><button class="btn secondary" onclick="deleteOutlet('${o.code}')">Hapus</button></div></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function addOutlet(){ const code = sel('outCode').value.trim(), name = sel('outName').value.trim(); if(!code||!name) return alert('Isi kode & nama'); const db = dbLoad(); if(db.outlets.some(x=>x.code===code)) return alert('Kode outlet sudah ada'); db.outlets.push({code,name}); dbSave(db); sel('outCode').value=''; sel('outName').value=''; renderOutlets(); refreshWidgets(); populateOutletSelect(); }
-function openEditOutlet(code){ const db = dbLoad(); const o = db.outlets.find(x=>x.code===code); if(!o) return alert('Not found'); showModal('Edit Outlet', `<div class="field"><label>Kode</label><input id="editOutCode" value="${o.code}" disabled></div><div class="field"><label>Nama</label><input id="editOutName" value="${escapeHtml(o.name)}"></div>`, ()=>{ const db2=dbLoad(); const out = db2.outlets.find(x=>x.code===code); out.name = sel('editOutName').value.trim(); dbSave(db2); closeModal(); renderOutlets(); populateOutletSelect(); refreshWidgets(); }); }
-function deleteOutlet(code){ if(!confirm('Hapus outlet?')) return; const db = dbLoad(); db.outlets = db.outlets.filter(x=>x.code!==code); dbSave(db); renderOutlets(); populateOutletSelect(); refreshWidgets(); }
-
-/* ===== Reports ===== */
-function collectRows(){ const db = dbLoad(); const r = db.receipts.map(x=>({...x,type:'receipt'})); const t = db.transfers.map(x=>({...x,type:'transfer'})); return [...r,...t].sort((a,b)=>new Date(b.date)-new Date(a.date)); }
-function renderReports(){ const tbody = sel('tblReports').querySelector('tbody'); tbody.innerHTML=''; const rows = collectRows(); const tf = sel('repType').value; const q = sel('repSearch').value.trim().toLowerCase(); let out = rows.filter(r=> tf==='all' ? true : r.type===tf); if(q) out = out.filter(r=>(r.code+' '+r.name+' '+(r.outlet||'')).toLowerCase().includes(q)); out.forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${i+1}</td><td>${new Date(r.date).toLocaleString()}</td><td>${r.type}</td><td>${r.code}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.outlet||'-'}</td>`; tbody.appendChild(tr); }); }
-function renderExpenses(){ const tbody = sel('tblExpenses').querySelector('tbody'); tbody.innerHTML=''; const db = dbLoad(); const agg = {}; db.transfers.forEach(t=> agg[t.outlet] = (agg[t.outlet]||0) + Number(t.qty)); db.outlets.forEach(o=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${o.code} — ${o.name}</td><td>${agg[o.code]||0}</td>`; tbody.appendChild(tr); }); }
-function exportCSV(){ const rows = []; const headers = ['Tanggal','Jenis','Kode','Nama','Qty','Outlet']; rows.push(headers.join(',')); sel('tblReports').querySelectorAll('tbody tr').forEach(tr=>{ const cols = Array.from(tr.children).slice(1).map(td=>escapeCSV(td.textContent.trim())); rows.push(cols.join(',')); }); const blob = new Blob([rows.join('\n')],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='reports.csv'; a.click(); URL.revokeObjectURL(url); }
-function escapeCSV(s){ return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
-
-/* ===== Settings ===== */
-function saveSettings(){ const db = dbLoad(); const u = sel('setUser').value.trim(); const p = sel('setPass').value; if(u) db.user.username = u; if(p) db.user.password = p; db.user.showWidgets = sel('setWidgets').checked; db.user.lang = sel('lang').value; dbSave(db); sel('saveNote').textContent = 'Disimpan.'; refreshWidgets(); }
-
-/* ===== Modal helpers ===== */
-function showModal(title, html, onSave){
-  sel('modal').classList.remove('hidden'); sel('modalTitle').textContent = title; sel('modalBody').innerHTML = html; sel('modalSave').onclick = onSave;
-}
-function closeModal(){ sel('modal').classList.add('hidden'); sel('modalBody').innerHTML=''; sel('modalSave').onclick = null; }
-
-/* ===== Utilities ===== */
-function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function init(){
-  dbInit(); refreshWidgets(); renderInventory(); renderItems(); renderOutlets(); renderTransfers(); renderReports(); renderExpenses(); populateOutletSelect();
   // routing
   const hash = (location.hash || '#dashboard').replace('#',''); showView(hash);
-  sel('repType').addEventListener('change', renderReports); sel('repSearch').addEventListener('input', renderReports);
-  sel('lang').addEventListener('change', (e)=>{ const db=dbLoad(); db.user.lang = e.target.value; dbSave(db); });
-  // sidebar auto-close on small screens when a view clicked
+  document.getElementById('repType').addEventListener('change', renderReports); 
+  document.getElementById('repSearch').addEventListener('input', renderReports);
+  document.getElementById('lang').addEventListener('change', (e)=>{ localStorage.setItem('wm.lang', e.target.value); });
   document.querySelectorAll('#navList [data-view]').forEach(a=> a.addEventListener('click', ()=>{ if(window.innerWidth<900) sidebar.classList.remove('show'); }));
+  loadAll();
 }
 window.addEventListener('load', init);
+
+/* ===== Modal helpers (kept for future extension) ===== */
+function showModal(title, html, onSave){
+  document.getElementById('modal').classList.remove('hidden'); document.getElementById('modalTitle').textContent = title; document.getElementById('modalBody').innerHTML = html; document.getElementById('modalSave').onclick = onSave;
+}
+function closeModal(){ document.getElementById('modal').classList.add('hidden'); document.getElementById('modalBody').innerHTML=''; document.getElementById('modalSave').onclick = null; }
 </script>
 
 </body>
