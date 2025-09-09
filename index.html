@@ -1,662 +1,300 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Warehouse Manager — Single File (Google Sheets)</title>
-<style>
-  :root{
-    --primary:#4e73df; --ok:#1cc88a; --warn:#f6c23e; --danger:#e74a3b;
-    --bg:#f6f7fb; --card:#fff; --muted:#64748b; --radius:12px; --shadow:0 8px 20px rgba(2,6,23,0.06);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:#0f1724}
-  a{color:inherit;text-decoration:none}
-  /* Topbar */
-  .topbar{position:sticky;top:0;z-index:60;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #eef2f6}
-  .brand{display:flex;gap:10px;align-items:center;color:var(--primary);font-weight:800}
-  .controls{display:flex;gap:8px;align-items:center}
-  .btn{border:0;padding:8px 12px;border-radius:10px;background:var(--primary);color:#fff;cursor:pointer}
-  .btn.ghost{background:transparent;border:1px solid var(--primary);color:var(--primary)}
-  .btn.secondary{background:#0f1724; opacity:.8}
-  .control{padding:7px 10px;border-radius:8px;border:1px solid #e6eefc;background:#fff}
-
-  /* Sidebar */
-  .sidebar{position:fixed;left:-260px;top:64px;bottom:0;width:260px;background:#13203d;color:#eaf0ff;padding:18px;transition:left .28s ease;z-index:70;overflow:auto}
-  .sidebar.show{left:0}
-  .nav h6{font-size:12px;color:#94b0ff;margin:12px 0;text-transform:uppercase;letter-spacing:.08em}
-  .nav ul{list-style:none;padding:0;margin:0}
-  .nav li{margin-bottom:6px}
-  .nav a{display:block;padding:10px;border-radius:8px;color:rgba(234,240,255,0.95)}
-  .nav a:hover,.nav a.active{background:#20355f}
-  .submenu{display:none;padding-left:12px;margin-top:6px}
-  .open>.submenu{display:block}
-
-  /* main */
-  .main{transition:margin-left .28s ease;padding:18px}
-  .sidebar.show ~ .main{margin-left:260px}
-  @media(min-width:900px){ .sidebar{left:0} .main{margin-left:260px} .menu-toggle{display:none} }
-
-  /* UI */
-  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
-  .card{background:var(--card);padding:12px;border-radius:var(--radius);box-shadow:var(--shadow)}
-  .card .label{color:var(--muted);font-size:13px}
-  .card .value{font-weight:800;color:var(--primary);font-size:20px}
-
-  .panel{background:var(--card);border-radius:var(--radius);padding:12px;margin-bottom:12px;box-shadow:var(--shadow)}
-  .grid-2{display:grid;grid-template-columns:1fr;gap:10px}
-  @media(min-width:780px){ .cards{grid-template-columns:repeat(4,1fr)} .grid-2{grid-template-columns:1fr 1fr} }
-  .field{display:flex;flex-direction:column;gap:6px}
-  input,select,textarea{padding:9px;border-radius:8px;border:1px solid #e6eefc;background:#fff}
-
-  .table-wrap{overflow:auto;border-radius:8px;border:1px solid #eef2f6}
-  table{width:100%;border-collapse:collapse;min-width:720px}
-  thead th{background:#fbfdff;color:var(--primary);padding:10px;text-align:left;position:sticky;top:0}
-  tbody td{padding:10px;border-bottom:1px solid #f3f6fb}
-  tbody tr:hover{background:#f7fbff}
-
-  .badge{display:inline-block;padding:5px 10px;border-radius:999px;color:#fff;font-weight:700}
-  .b-ok{background:var(--ok)}.b-warn{background:var(--warn)}.b-danger{background:var(--danger)}
-
-  .tools{display:flex;gap:8px;align-items:center}
-  .right{margin-left:auto}
-  .muted{color:var(--muted)}
-  .hidden{display:none!important}
-
-  /* modal */
-  .modal-back{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:90}
-  .modal{background:#fff;padding:14px;border-radius:10px;max-width:720px;width:92%;box-shadow:var(--shadow)}
-
-  @media(max-width:640px){ table{min-width:600px} .cards{grid-template-columns:repeat(2,1fr)} }
-  @media print{ .topbar,.sidebar,.btn,.cards{display:none} table{min-width:0} }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warehouse Manager — Google Sheets Integrated</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-800">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-blue-700 text-white p-4 space-y-4">
+      <h1 class="text-2xl font-bold">📦 WMS</h1>
+      <nav class="space-y-2">
+        <button onclick="showPage('dashboard')" class="w-full text-left p-2 rounded hover:bg-blue-600">Dashboard</button>
+        <button onclick="showPage('penerimaan')" class="w-full text-left p-2 rounded hover:bg-blue-600">Penerimaan Barang</button>
+        <button onclick="showPage('transfer')" class="w-full text-left p-2 rounded hover:bg-blue-600">Transfer ke Outlet</button>
+        <button onclick="showPage('master')" class="w-full text-left p-2 rounded hover:bg-blue-600">Master Barang</button>
+        <button onclick="showPage('outlet')" class="w-full text-left p-2 rounded hover:bg-blue-600">Outlet</button>
+        <button onclick="showPage('laporan')" class="w-full text-left p-2 rounded hover:bg-blue-600">Laporan</button>
+        <button onclick="showPage('pengaturan')" class="w-full text-left p-2 rounded hover:bg-blue-600">Pengaturan</button>
+      </nav>
+    </aside>
 
-<header class="topbar">
-  <div class="brand"><div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#7c9af5)"></div>Warehouse Manager</div>
-  <div class="controls">
-    <select id="lang" class="control"><option value="id">Indonesia</option><option value="en">English</option></select>
-    <div id="currentUser" class="muted">admin</div>
-    <button id="menuToggle" class="btn ghost menu-toggle">☰</button>
+    <!-- Main Content -->
+    <main class="flex-1 p-6 overflow-y-auto">
+      <!-- Dashboard -->
+      <section id="dashboard" class="page">
+        <h2 class="text-xl font-bold mb-4">📊 Dashboard</h2>
+        <div id="summary" class="grid grid-cols-2 gap-4"></div>
+      </section>
+
+      <!-- Penerimaan Barang -->
+      <section id="penerimaan" class="page hidden">
+        <h2 class="text-xl font-bold mb-4">📥 Penerimaan Barang</h2>
+        <form id="formPenerimaan" class="space-y-2">
+          <input type="text" placeholder="Kode Barang" id="kodePenerimaan" class="p-2 border w-full" required>
+          <input type="number" placeholder="Jumlah" id="qtyPenerimaan" class="p-2 border w-full" required>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Simpan</button>
+        </form>
+      </section>
+
+      <!-- Transfer Barang -->
+      <section id="transfer" class="page hidden">
+        <h2 class="text-xl font-bold mb-4">🚚 Transfer Barang</h2>
+        <form id="formTransfer" class="space-y-2">
+          <input type="text" placeholder="Kode Barang" id="kodeTransfer" class="p-2 border w-full" required>
+          <input type="number" placeholder="Jumlah" id="qtyTransfer" class="p-2 border w-full" required>
+          <input type="text" placeholder="Outlet Tujuan" id="outletTransfer" class="p-2 border w-full" required>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Simpan</button>
+        </form>
+      </section>
+
+      <!-- Master Barang -->
+      <section id="master" class="page hidden">
+        <h2 class="text-xl font-bold mb-4">📑 Master Barang</h2>
+        <form id="formMaster" class="space-y-2">
+          <input type="text" placeholder="Kode Barang" id="kodeMaster" class="p-2 border w-full" required>
+          <input type="text" placeholder="Nama Barang" id="namaMaster" class="p-2 border w-full" required>
+          <input type="number" placeholder="Stok Awal" id="stokMaster" class="p-2 border w-full" required>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Tambah</button>
+        </form>
+        <table class="w-full mt-4 border" id="tabelMaster"></table>
+      </section>
+
+      <!-- Outlet -->
+      <section id="outlet" class="page hidden">
+        <h2 class="text-xl font-bold mb-4">🏬 Outlet</h2>
+        <form id="formOutlet" class="space-y-2">
+          <input type="text" placeholder="Kode Outlet" id="kodeOutlet" class="p-2 border w-full" required>
+          <input type="text" placeholder="Nama Outlet" id="namaOutlet" class="p-2 border w-full" required>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Tambah</button>
+        </form>
+        <table class="w-full mt-4 border" id="tabelOutlet"></table>
+      </section>
+
+      <!-- Laporan -->
+      <section id="laporan" class="page hidden">
+        <h2 class="text-xl font-bold mb-4">📊 Laporan</h2>
+        <button onclick="exportCSV()" class="bg-green-600 text-white px-4 py-2 rounded mb-2">Export CSV</button>
+        <table class="w-full border" id="tabelLaporan"></table>
+      </section>
+
+      <!-- Pengaturan -->
+      <section id="pengaturan" class="page hidden">
+        <h2 class="text-xl font-bold mb-4">⚙️ Pengaturan</h2>
+        <p>Tambah Admin, Tambah Store, Ubah Font, Tema, dsb.</p>
+      </section>
+    </main>
   </div>
-</header>
-
-<aside class="sidebar" id="sidebar">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-    <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#7c9af5)"></div>
-    <div style="font-weight:800">Warehouse</div>
-  </div>
-
-  <nav class="nav">
-    <h6>Navigation</h6>
-    <ul id="navList">
-      <li><a href="#dashboard" data-view="dashboard" class="active">Dashboard</a></li>
-
-      <li>
-        <a href="#" data-toggle="sub">Operasional ▾</a>
-        <div class="submenu">
-          <a href="#receipt" data-view="receipt">Penerimaan Barang</a>
-          <a href="#transfer" data-view="transfer">Transfer ke Outlet</a>
-        </div>
-      </li>
-
-      <li>
-        <a href="#" data-toggle="sub">Master Data ▾</a>
-        <div class="submenu">
-          <a href="#items" data-view="items">Master Barang</a>
-          <a href="#outlets" data-view="outlets">Outlet</a>
-        </div>
-      </li>
-
-      <li><a href="#reports" data-view="reports">Laporan</a></li>
-      <li><a href="#settings" data-view="settings">Pengaturan</a></li>
-    </ul>
-  </nav>
-  <div style="margin-top:18px;font-size:13px;color:#94b0ff">© <span id="year"></span> Warehouse</div>
-</aside>
-
-<main class="main" id="main" style="padding:18px">
-  <!-- Dashboard -->
-  <section id="view-dashboard" class="view">
-    <div class="cards" id="widgets">
-      <div class="card"><div class="label">Jenis Barang</div><div class="value" id="wItems">0</div></div>
-      <div class="card"><div class="label">Total Stok (hasil agregasi)</div><div class="value" id="wStock">0</div></div>
-      <div class="card"><div class="label">Total Penerimaan</div><div class="value" id="wReceipts">0</div></div>
-      <div class="card"><div class="label">Total Transfer</div><div class="value" id="wTransfers">0</div></div>
-      <div class="card"><div class="label">Outlet</div><div class="value" id="wOutlets">0</div></div>
-      <div class="card"><div class="label">Pengguna</div><div class="value" id="wUsers">1</div></div>
-    </div>
-    <div class="panel">
-      <h3 style="margin:0">Aksi Cepat</h3>
-      <div class="tools" style="margin-top:8px">
-        <button class="btn" onclick="showView('receipt')">Penerimaan</button>
-        <button class="btn" onclick="showView('transfer')">Transfer</button>
-        <button class="btn ghost" onclick="showView('items')">Master Barang</button>
-        <button class="btn ghost" onclick="showView('reports')">Laporan</button>
-      </div>
-      <div class="muted" style="margin-top:8px">
-        *Stok dihitung dari <b>MasterBarang.Qty (jika ada)</b> + ΣPenerimaan − ΣTransfer
-      </div>
-    </div>
-  </section>
-
-  <!-- Receipt -->
-  <section id="view-receipt" class="view hidden">
-    <div class="panel">
-      <h3>Penerimaan Barang</h3>
-      <div class="grid-2" style="margin-top:10px">
-        <div class="field"><label>Kode Barang</label><input id="rcpCode" placeholder="BRG-001"></div>
-        <div class="field"><label>Nama Barang</label><input id="rcpName" placeholder="Cat Tembok 10L"></div>
-        <div class="field"><label>Kuantitas</label><input id="rcpQty" type="number" min="1" value="1"></div>
-        <div class="field"><label>Keterangan</label><input id="rcpNote" placeholder="Nota/Supplier (opsional)"></div>
-        <div style="align-self:end"><button class="btn" onclick="addReceipt()">Tambah Penerimaan</button></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Daftar Inventori (Agregasi)</h3>
-      <div class="table-wrap">
-        <table id="tblInventory"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Aksi</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Transfer -->
-  <section id="view-transfer" class="view hidden">
-    <div class="panel">
-      <h3>Transfer ke Outlet</h3>
-      <div class="grid-2" style="margin-top:10px">
-        <div class="field"><label>Kode Barang</label><input id="trfCode" placeholder="BRG-001"></div>
-        <div class="field"><label>Nama Barang</label><input id="trfName" placeholder="Cat Tembok 10L"></div>
-        <div class="field"><label>Kuantitas</label><input id="trfQty" type="number" min="1" value="1"></div>
-        <div class="field"><label>Outlet</label><select id="trfOutlet"></select></div>
-        <div class="field"><label>Keterangan</label><input id="trfNote" placeholder="(opsional)"></div>
-        <div style="align-self:end"><button class="btn" onclick="addTransfer()">Transfer</button></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Riwayat Transfer</h3>
-      <div class="table-wrap">
-        <table id="tblTransfers"><thead><tr><th>No</th><th>Tanggal</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Outlet</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Items -->
-  <section id="view-items" class="view hidden">
-    <div class="panel">
-      <h3>Master Barang</h3>
-      <div class="row" style="margin-top:10px;gap:8px">
-        <div class="field" style="flex:1"><label>Kode</label><input id="itCode"></div>
-        <div class="field" style="flex:2"><label>Nama</label><input id="itName"></div>
-        <div class="field" style="flex:1"><label>Qty Awal (opsional)</label><input id="itQty" type="number" min="0" value="0"></div>
-        <div style="align-self:end"><button class="btn" onclick="addItem()">Tambah Barang</button></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Daftar Barang (dari MasterBarang)</h3>
-      <div class="table-wrap">
-        <table id="tblItems"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Qty Awal</th><th>Aksi</th></tr></thead><tbody></tbody></table>
-      </div>
-      <div class="muted" style="margin-top:6px">Edit/Hapus dari MasterBarang membutuhkan endpoint update/delete. Saat ini hanya <b>Tambah</b>.</div>
-    </div>
-  </section>
-
-  <!-- Outlets -->
-  <section id="view-outlets" class="view hidden">
-    <div class="panel">
-      <h3>Outlet</h3>
-      <div class="row" style="margin-top:10px;gap:8px">
-        <div class="field" style="flex:1"><label>Kode</label><input id="outCode"></div>
-        <div class="field" style="flex:2"><label>Nama</label><input id="outName"></div>
-        <div style="align-self:end"><button class="btn" onclick="addOutlet()">Tambah Outlet</button></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Daftar Outlet</h3>
-      <div class="table-wrap">
-        <table id="tblOutlets"><thead><tr><th>No</th><th>Kode</th><th>Nama</th><th>Aksi</th></tr></thead><tbody></tbody></table>
-      </div>
-      <div class="muted" style="margin-top:6px">Edit/Hapus outlet membutuhkan endpoint update/delete. Saat ini hanya <b>Tambah</b>.</div>
-    </div>
-  </section>
-
-  <!-- Reports -->
-  <section id="view-reports" class="view hidden">
-    <div class="panel">
-      <h3>Laporan Transaksi</h3>
-      <div class="row" style="align-items:center;gap:8px">
-        <div class="field" style="flex:1"><label>Jenis</label>
-          <select id="repType" class="control"><option value="all">Semua</option><option value="receipt">Penerimaan</option><option value="transfer">Transfer</option></select>
-        </div>
-        <div class="field" style="flex:2"><label>Pencarian</label><input id="repSearch" placeholder="Cari kode/nama/outlet..."></div>
-        <div class="right tools">
-          <button class="btn ghost" onclick="exportCSV()">Export CSV</button>
-          <button class="btn" onclick="window.print()">Print to PDF</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="table-wrap">
-        <table id="tblReports"><thead><tr><th>No</th><th>Tanggal</th><th>Jenis</th><th>Kode</th><th>Nama</th><th>Qty</th><th>Outlet</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Ringkasan Pengeluaran</h3>
-      <div class="table-wrap">
-        <table id="tblExpenses"><thead><tr><th>Outlet</th><th>Total Qty</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Settings -->
-  <section id="view-settings" class="view hidden">
-    <div class="panel">
-      <h3>Pengaturan</h3>
-      <div class="grid-2">
-        <div class="field"><label>Username</label><input id="setUser" placeholder="admin"></div>
-        <div class="field"><label>Password</label><input id="setPass" type="password"></div>
-        <div class="row" style="align-items:center"><input type="checkbox" id="setWidgets"><label for="setWidgets" style="margin-left:8px">Tampilkan Widget</label></div>
-        <div style="align-self:end"><button class="btn" onclick="saveSettings()">Simpan</button></div>
-      </div>
-      <div id="saveNote" class="muted" style="margin-top:10px"></div>
-    </div>
-  </section>
-</main>
-
-<!-- Modal (used for edit) -->
-<div id="modal" class="modal-back hidden" role="dialog">
-  <div class="modal">
-    <h4 id="modalTitle">Edit</h4>
-    <div id="modalBody"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-      <button class="btn ghost" onclick="closeModal()">Batal</button>
-      <button class="btn" id="modalSave">Simpan</button>
-    </div>
-  </div>
-</div>
 
 <script>
-/* ====== KONFIGURASI GOOGLE APPS SCRIPT ====== */
-// Gunakan endpoint Web App milik Anda (sudah FIX dari pesan Anda)
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTPodzzq--ouz2WZVaclGrVrl_9FQumAbFLDzyXiIXMZo-Oz67r38HFiODpjMzoxWt/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrEuroWXQ-EPgYTV_shis6rTepj6R5C2E8oijcaCMad40oD4Ce7reAcArXyVaskrJA/exec";
 
-/* ====== STATE (di-memori, berasal dari Google Sheets) ====== */
-let state = {
-  master: [],     // array of {Kode, Nama, Qty}
-  outlets: [],    // array of {Kode, Nama}
-  receipts: [],   // array of {Tanggal, Kode, Nama, Qty, Note}
-  transfers: []   // array of {Tanggal, Kode, Nama, Qty, Outlet, Note}
-};
-
-/* ====== UTIL: Fetch Google Sheets ====== */
-async function fetchSheet(sheetName){
-  const res = await fetch(`${SCRIPT_URL}?sheet=${encodeURIComponent(sheetName)}`);
-  const json = await res.json();
-  if(json.error){ throw new Error(json.error); }
-  const rows = json.data || json; // dukung {data:[...]} atau [...]
-  if(!rows || rows.length === 0) return [];
-  const [header, ...body] = rows;
-  const idx = Object.fromEntries(header.map((h,i)=>[String(h).trim(), i]));
-  return body.map(r=>({
-    get: k => r[idx[k]] ?? "",
-    row: r,
-    asObject: () => Object.fromEntries(Object.keys(idx).map(k=>[k, r[idx[k]]]))
-  }));
+// ==== Utilities ====
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
 }
 
-async function appendRow(sheetName, rowArray){
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheet: sheetName, row: rowArray })
-  });
-  const json = await res.json();
-  if(json.error){ throw new Error(json.error); }
-  return json;
+async function fetchSheet(sheet) {
+  const res = await fetch(`${SCRIPT_URL}?sheet=${sheet}`);
+  return res.json();
 }
 
-/* ====== HELPERS ====== */
-function sel(id){ return document.getElementById(id); }
-function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
-function uid(){ return 'id'+Math.random().toString(36).slice(2,9); }
-
-// Build dictionary stok agregasi: opening from MasterBarang.Qty (opsional) + Σ receipts - Σ transfers
-function buildInventory(){
-  const open = {}; // Kode -> {code,name,qty}
-  state.master.forEach(obj => {
-    const o = obj.asObject();
-    const code = String(o.Kode||o.kode||"").trim();
-    if(!code) return;
-    const name = String(o.Nama||o.nama||"").trim();
-    const oq = Number(o.Qty||o.qty||0) || 0;
-    open[code] = { code, name, qty: oq };
-  });
-
-  const plus = {}; // receipts
-  state.receipts.forEach(x=>{
-    const o = x.asObject();
-    const code = String(o.Kode||o.kode||"").trim();
-    const name = String(o.Nama||o.nama||"").trim();
-    const q = Number(o.Qty||o.qty||0) || 0;
-    if(!code) return;
-    if(!open[code]) open[code] = { code, name, qty: 0 };
-    plus[code] = (plus[code]||0) + q;
-  });
-
-  const minus = {}; // transfers
-  state.transfers.forEach(x=>{
-    const o = x.asObject();
-    const code = String(o.Kode||o.kode||"").trim();
-    const q = Number(o.Qty||o.qty||0) || 0;
-    if(!code) return;
-    minus[code] = (minus[code]||0) + q;
-  });
-
-  const inv = Object.values(open);
-  // include codes that only exist in receipts/transfers
-  const codes = new Set([...Object.keys(open), ...Object.keys(plus), ...Object.keys(minus)]);
-  const out = [];
-  codes.forEach(code=>{
-    const name = open[code]?.name || // from master
-      (state.receipts.find(x=> (x.asObject().Kode||x.asObject().kode||"").trim()===code)?.asObject().Nama) ||
-      (state.transfers.find(x=> (x.asObject().Kode||x.asObject().kode||"").trim()===code)?.asObject().Nama) || '';
-    const base = open[code]?.qty || 0;
-    const q = base + (plus[code]||0) - (minus[code]||0);
-    out.push({ code, name, qty: q });
-  });
-  // sort by code
-  out.sort((a,b)=> a.code.localeCompare(b.code));
-  return out;
+async function appendRow(sheet, row) {
+  return fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sheet, action: "append", row })
+  }).then(r => r.json());
 }
 
-/* ====== RENDER ====== */
-function refreshWidgets(){
-  const inv = buildInventory();
-  sel('wItems').textContent = inv.length;
-  sel('wStock').textContent = inv.reduce((s,i)=> s + Number(i.qty||0),0);
-  sel('wReceipts').textContent = state.receipts.length;
-  sel('wTransfers').textContent = state.transfers.length;
-  sel('wOutlets').textContent = state.outlets.length;
-  sel('wUsers').textContent = 1;
-  sel('currentUser').textContent = '👤 ' + (localStorage.getItem('wm.user') || 'admin');
-  sel('setUser').value = localStorage.getItem('wm.user') || '';
-  sel('setWidgets').checked = true;
-  sel('lang').value = localStorage.getItem('wm.lang') || 'id';
-  sel('year').textContent = new Date().getFullYear();
+async function updateRow(sheet, rowIndex, row) {
+  return fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sheet, action: "update", rowIndex, row })
+  }).then(r => r.json());
 }
 
-function renderInventory(){
-  const tbody = sel('tblInventory').querySelector('tbody'); tbody.innerHTML = '';
-  const inv = buildInventory();
-  inv.forEach((it,i)=>{
-    const tr = document.createElement('tr');
-    const bc = it.qty <=5 ? 'b-danger' : (it.qty < 15 ? 'b-warn' : 'b-ok');
-    tr.innerHTML = `<td>${i+1}</td><td>${it.code}</td><td>${escapeHtml(it.name)}</td><td><span class="badge ${bc}">${it.qty}</span></td>
-      <td><div class="tools"><button class="btn ghost" onclick="alert('Edit item membutuhkan endpoint update - belum tersedia')">Edit</button><button class="btn secondary" onclick="alert('Hapus item membutuhkan endpoint delete - belum tersedia')">Hapus</button></div></td>`;
-    tbody.appendChild(tr);
-  });
+async function deleteRow(sheet, rowIndex) {
+  return fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sheet, action: "delete", rowIndex })
+  }).then(r => r.json());
 }
 
-function renderTransfers(){
-  const tbody = sel('tblTransfers').querySelector('tbody'); tbody.innerHTML='';
-  const rows = state.transfers.slice();
-  // sort desc by Tanggal if exists
-  rows.sort((a,b)=>{
-    const da = new Date(a.asObject().Tanggal || a.asObject().Date || 0).getTime();
-    const db = new Date(b.asObject().Tanggal || b.asObject().Date || 0).getTime();
-    return db - da;
-  });
-  rows.forEach((t,i)=>{
-    const o = t.asObject();
-    const dt = o.Tanggal || o.Date || '';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${dt ? new Date(dt).toLocaleString() : '-'}</td><td>${o.Kode||''}</td><td>${escapeHtml(o.Nama||'')}</td><td>${o.Qty||0}</td><td>${o.Outlet||'-'}</td>`;
-    tbody.appendChild(tr);
-  });
-}
+// ==== Forms ====
 
-function renderItems(){
-  const tbody = sel('tblItems').querySelector('tbody'); tbody.innerHTML='';
-  const rows = state.master.slice();
-  rows.forEach((x,i)=>{
-    const o = x.asObject();
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${o.Kode||''}</td><td>${escapeHtml(o.Nama||'')}</td><td>${o.Qty||0}</td>
-      <td><div class="tools"><button class="btn ghost" onclick="alert('Edit butuh endpoint update - belum tersedia')">Edit</button><button class="btn secondary" onclick="alert('Hapus butuh endpoint delete - belum tersedia')">Hapus</button></div></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderOutlets(){
-  const tbody = sel('tblOutlets').querySelector('tbody'); tbody.innerHTML='';
-  const rows = state.outlets.slice();
-  rows.forEach((x,i)=>{
-    const o = x.asObject();
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${o.Kode||''}</td><td>${escapeHtml(o.Nama||'')}</td><td><div class="tools"><button class="btn ghost" onclick="alert('Edit butuh endpoint update - belum tersedia')">Edit</button><button class="btn secondary" onclick="alert('Hapus butuh endpoint delete - belum tersedia')">Hapus</button></div></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderReports(){
-  const tbody = sel('tblReports').querySelector('tbody'); tbody.innerHTML='';
-  // koleksi rows gabungan
-  const r = state.receipts.map(x=>({ type:'receipt', ...x.asObject() }));
-  const t = state.transfers.map(x=>({ type:'transfer', ...x.asObject() }));
-  const rows = [...r, ...t];
-  // sort desc by date
-  rows.sort((a,b)=> new Date(b.Tanggal||b.Date||0) - new Date(a.Tanggal||a.Date||0));
-  const tf = sel('repType').value;
-  const q = sel('repSearch').value.trim().toLowerCase();
-  let out = rows.filter(r=> tf==='all' ? true : r.type===tf);
-  if(q) out = out.filter(r=>(`${r.Kode||''} ${r.Nama||''} ${r.Outlet||''}`).toLowerCase().includes(q));
-  out.forEach((r,i)=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${r.Tanggal? new Date(r.Tanggal).toLocaleString(): '-'}</td><td>${r.type}</td><td>${r.Kode||''}</td><td>${escapeHtml(r.Nama||'')}</td><td>${r.Qty||0}</td><td>${r.Outlet||'-'}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderExpenses(){
-  const tbody = sel('tblExpenses').querySelector('tbody'); tbody.innerHTML='';
-  const agg = {};
-  state.transfers.forEach(t=>{ const o=t.asObject(); const k=o.Outlet||'-'; agg[k]=(agg[k]||0)+ (Number(o.Qty||0)||0); });
-  // tampilkan untuk semua outlet yang ada di master outlet juga
-  const outlets = new Set([ ...Object.keys(agg), ...state.outlets.map(o=>o.asObject().Kode) ]);
-  Array.from(outlets).forEach(k=>{
-    const name = state.outlets.find(o=>o.asObject().Kode===k)?.asObject().Nama || k;
-    const tr=document.createElement('tr');
-    tr.innerHTML = `<td>${k} — ${escapeHtml(name)}</td><td>${agg[k]||0}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function exportCSV(){
-  const rows = [];
-  const headers = ['Tanggal','Jenis','Kode','Nama','Qty','Outlet'];
-  rows.push(headers.join(','));
-  sel('tblReports').querySelectorAll('tbody tr').forEach(tr=>{
-    const cols = Array.from(tr.children).slice(1).map(td=>escapeCSV(td.textContent.trim()));
-    rows.push(cols.join(','));
-  });
-  const blob = new Blob([rows.join('\n')],{type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='reports.csv'; a.click(); URL.revokeObjectURL(url);
-}
-function escapeCSV(s){ return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
-
-/* ====== OPERASIONAL (WRITE) ====== */
-async function addReceipt(){
-  try{
-    const code = sel('rcpCode').value.trim();
-    const name = sel('rcpName').value.trim();
-    const qty = Number(sel('rcpQty').value)||0;
-    const note = sel('rcpNote').value.trim();
-    if(!code||!name||qty<=0) return alert('Lengkapi data penerimaan.');
-    const row = [new Date().toISOString(), code, name, qty, note]; // Header yang disarankan: Tanggal,Kode,Nama,Qty,Note
-    await appendRow('Penerimaan', row);
-    sel('rcpCode').value=''; sel('rcpName').value=''; sel('rcpQty').value=1; sel('rcpNote').value='';
-    await loadAll();
-    alert('✅ Penerimaan disimpan.');
-  }catch(err){ alert('Gagal simpan penerimaan: '+err.message); }
-}
-
-async function addTransfer(){
-  try{
-    const code = sel('trfCode').value.trim();
-    const name = sel('trfName').value.trim();
-    const qty = Number(sel('trfQty').value)||0;
-    const outlet = sel('trfOutlet').value;
-    const note = sel('trfNote').value.trim();
-    if(!code||!name||qty<=0||!outlet) return alert('Lengkapi data transfer.');
-    const inv = buildInventory();
-    const current = inv.find(x=>x.code===code)?.qty || 0;
-    if(current < qty) return alert('Stok tidak cukup. Stok tersedia: '+current);
-    const row = [new Date().toISOString(), code, name, qty, outlet, note]; // Header disarankan: Tanggal,Kode,Nama,Qty,Outlet,Note
-    await appendRow('Transfer', row);
-    sel('trfCode').value=''; sel('trfName').value=''; sel('trfQty').value=1; sel('trfNote').value='';
-    await loadAll();
-    alert('✅ Transfer disimpan.');
-  }catch(err){ alert('Gagal simpan transfer: '+err.message); }
-}
-
-async function addItem(){
-  try{
-    const code = sel('itCode').value.trim();
-    const name = sel('itName').value.trim();
-    const qty0 = Number(sel('itQty').value)||0;
-    if(!code||!name) return alert('Isi kode dan nama.');
-    // Cek duplikasi berdasarkan MasterBarang saat ini
-    const exists = state.master.some(x=> (x.asObject().Kode||'').trim()===code);
-    if(exists) return alert('Kode sudah ada di MasterBarang.');
-    const row = [code, name, qty0]; // Header disarankan: Kode,Nama,Qty
-    await appendRow('MasterBarang', row);
-    sel('itCode').value=''; sel('itName').value=''; sel('itQty').value=0;
-    await loadAll();
-    alert('✅ Barang ditambahkan.');
-  }catch(err){ alert('Gagal tambah barang: '+err.message); }
-}
-
-async function addOutlet(){
-  try{
-    const code = sel('outCode').value.trim();
-    const name = sel('outName').value.trim();
-    if(!code||!name) return alert('Isi kode & nama');
-    const exists = state.outlets.some(x=> (x.asObject().Kode||'').trim()===code);
-    if(exists) return alert('Kode outlet sudah ada');
-    const row = [code, name]; // Header disarankan: Kode,Nama
-    await appendRow('Outlet', row);
-    sel('outCode').value=''; sel('outName').value='';
-    await loadAll();
-    alert('✅ Outlet ditambahkan.');
-  }catch(err){ alert('Gagal tambah outlet: '+err.message); }
-}
-
-function populateOutletSelect(){
-  const selEl = sel('trfOutlet'); selEl.innerHTML = '';
-  state.outlets.forEach(o=>{
-    const obj = o.asObject();
-    const opt = document.createElement('option');
-    opt.value = obj.Kode || '';
-    opt.textContent = `${obj.Kode||''} — ${obj.Nama||''}`;
-    selEl.appendChild(opt);
-  });
-}
-
-/* ====== SETTINGS (LOCAL ONLY) ====== */
-function saveSettings(){
-  const u = sel('setUser').value.trim();
-  const p = sel('setPass').value.trim();
-  if(u) localStorage.setItem('wm.user', u);
-  if(p) localStorage.setItem('wm.pass', p);
-  localStorage.setItem('wm.lang', sel('lang').value);
-  sel('saveNote').textContent = 'Disimpan.';
-  refreshWidgets();
-}
-
-/* ====== VIEW / NAV ====== */
-function showView(name){
-  const views = ['dashboard','receipt','transfer','items','outlets','reports','settings'];
-  views.forEach(v=> {
-    const el = sel('view-'+v);
-    if(!el) return;
-    el.classList.toggle('hidden', v!==name);
-    document.querySelectorAll('#navList [data-view="'+v+'"]').forEach(a=> a.classList.toggle('active', v===name));
-  });
-  if(name==='dashboard') refreshWidgets();
-  if(name==='receipt') renderInventory();
-  if(name==='transfer'){ renderTransfers(); populateOutletSelect(); }
-  if(name==='items') renderItems();
-  if(name==='outlets') renderOutlets();
-  if(name==='reports'){ renderReports(); renderExpenses(); }
-  location.hash = name;
-}
-
-/* ====== INIT: LOAD ALL DATA FROM SHEETS ====== */
-async function loadAll(){
-  // Ambil data paralel
-  const [master, outlets, receipts, transfers] = await Promise.all([
-    fetchSheet('MasterBarang').catch(()=>[]),
-    fetchSheet('Outlet').catch(()=>[]),
-    fetchSheet('Penerimaan').catch(()=>[]),
-    fetchSheet('Transfer').catch(()=>[])
-  ]);
-  state.master = master;
-  state.outlets = outlets;
-  state.receipts = receipts;
-  state.transfers = transfers;
-  // Render
-  refreshWidgets();
-  renderInventory();
-  renderItems();
-  renderOutlets();
-  renderTransfers();
-  renderReports();
-  renderExpenses();
-  populateOutletSelect();
-}
-
-/* ===== sidebar & nav behavior ===== */
-const menuToggle = document.getElementById('menuToggle'), sidebar = document.getElementById('sidebar');
-menuToggle.addEventListener('click', ()=> sidebar.classList.toggle('show'));
-
-document.addEventListener('click', (e)=>{
-  if(window.innerWidth < 900 && !sidebar.contains(e.target) && e.target !== menuToggle) sidebar.classList.remove('show');
+// Master Barang
+const formMaster = document.getElementById('formMaster');
+formMaster.addEventListener('submit', async e => {
+  e.preventDefault();
+  const row = [
+    document.getElementById('kodeMaster').value,
+    document.getElementById('namaMaster').value,
+    document.getElementById('stokMaster').value
+  ];
+  await appendRow("MasterBarang", row);
+  loadMaster();
+  formMaster.reset();
 });
 
-document.querySelectorAll('[data-toggle="sub"]').forEach(btn=> btn.addEventListener('click', (e)=>{
-  e.preventDefault(); btn.parentElement.classList.toggle('open');
-}));
+async function loadMaster() {
+  const data = await fetchSheet("MasterBarang");
+  const table = document.getElementById('tabelMaster');
+  table.innerHTML = "<tr><th>Kode</th><th>Nama</th><th>Stok</th><th>Aksi</th></tr>";
+  data.data.slice(1).forEach((r, i) => {
+    table.innerHTML += `<tr>
+      <td>${r[0]}</td>
+      <td>${r[1]}</td>
+      <td>${r[2]}</td>
+      <td>
+        <button onclick="editMaster(${i+2}, '${r[0]}','${r[1]}','${r[2]}')" class='text-blue-600'>Edit</button>
+        <button onclick="deleteRow('MasterBarang', ${i+2}).then(loadMaster)" class='text-red-600 ml-2'>Hapus</button>
+      </td>
+    </tr>`;
+  });
+}
 
-document.getElementById('navList').addEventListener('click', e=>{
-  const a = e.target.closest('[data-view]'); if(!a) return;
-  e.preventDefault(); if(window.innerWidth<900) sidebar.classList.remove('show'); showView(a.dataset.view);
+function editMaster(rowIndex, kode, nama, stok) {
+  document.getElementById('kodeMaster').value = kode;
+  document.getElementById('namaMaster').value = nama;
+  document.getElementById('stokMaster').value = stok;
+  formMaster.onsubmit = async e => {
+    e.preventDefault();
+    const row = [
+      document.getElementById('kodeMaster').value,
+      document.getElementById('namaMaster').value,
+      document.getElementById('stokMaster').value
+    ];
+    await updateRow("MasterBarang", rowIndex, row);
+    formMaster.reset();
+    formMaster.onsubmit = async e => {
+      e.preventDefault();
+      const row = [
+        document.getElementById('kodeMaster').value,
+        document.getElementById('namaMaster').value,
+        document.getElementById('stokMaster').value
+      ];
+      await appendRow("MasterBarang", row);
+      formMaster.reset();
+      loadMaster();
+    };
+    loadMaster();
+  };
+}
+
+// Outlet
+const formOutlet = document.getElementById('formOutlet');
+formOutlet.addEventListener('submit', async e => {
+  e.preventDefault();
+  const row = [
+    document.getElementById('kodeOutlet').value,
+    document.getElementById('namaOutlet').value
+  ];
+  await appendRow("Outlet", row);
+  loadOutlet();
+  formOutlet.reset();
 });
 
-function init(){
-  // routing
-  const hash = (location.hash || '#dashboard').replace('#',''); showView(hash);
-  document.getElementById('repType').addEventListener('change', renderReports); 
-  document.getElementById('repSearch').addEventListener('input', renderReports);
-  document.getElementById('lang').addEventListener('change', (e)=>{ localStorage.setItem('wm.lang', e.target.value); });
-  document.querySelectorAll('#navList [data-view]').forEach(a=> a.addEventListener('click', ()=>{ if(window.innerWidth<900) sidebar.classList.remove('show'); }));
-  loadAll();
+async function loadOutlet() {
+  const data = await fetchSheet("Outlet");
+  const table = document.getElementById('tabelOutlet');
+  table.innerHTML = "<tr><th>Kode</th><th>Nama</th><th>Aksi</th></tr>";
+  data.data.slice(1).forEach((r, i) => {
+    table.innerHTML += `<tr>
+      <td>${r[0]}</td>
+      <td>${r[1]}</td>
+      <td>
+        <button onclick="editOutlet(${i+2}, '${r[0]}','${r[1]}')" class='text-blue-600'>Edit</button>
+        <button onclick="deleteRow('Outlet', ${i+2}).then(loadOutlet)" class='text-red-600 ml-2'>Hapus</button>
+      </td>
+    </tr>`;
+  });
 }
-window.addEventListener('load', init);
 
-/* ===== Modal helpers (kept for future extension) ===== */
-function showModal(title, html, onSave){
-  document.getElementById('modal').classList.remove('hidden'); document.getElementById('modalTitle').textContent = title; document.getElementById('modalBody').innerHTML = html; document.getElementById('modalSave').onclick = onSave;
+function editOutlet(rowIndex, kode, nama) {
+  document.getElementById('kodeOutlet').value = kode;
+  document.getElementById('namaOutlet').value = nama;
+  formOutlet.onsubmit = async e => {
+    e.preventDefault();
+    const row = [
+      document.getElementById('kodeOutlet').value,
+      document.getElementById('namaOutlet').value
+    ];
+    await updateRow("Outlet", rowIndex, row);
+    formOutlet.reset();
+    formOutlet.onsubmit = async e => {
+      e.preventDefault();
+      const row = [
+        document.getElementById('kodeOutlet').value,
+        document.getElementById('namaOutlet').value
+      ];
+      await appendRow("Outlet", row);
+      formOutlet.reset();
+      loadOutlet();
+    };
+    loadOutlet();
+  };
 }
-function closeModal(){ document.getElementById('modal').classList.add('hidden'); document.getElementById('modalBody').innerHTML=''; document.getElementById('modalSave').onclick = null; }
+
+// Penerimaan
+const formPenerimaan = document.getElementById('formPenerimaan');
+formPenerimaan.addEventListener('submit', async e => {
+  e.preventDefault();
+  const row = [
+    document.getElementById('kodePenerimaan').value,
+    document.getElementById('qtyPenerimaan').value,
+    new Date().toLocaleString()
+  ];
+  await appendRow("Penerimaan", row);
+  formPenerimaan.reset();
+});
+
+// Transfer
+const formTransfer = document.getElementById('formTransfer');
+formTransfer.addEventListener('submit', async e => {
+  e.preventDefault();
+  const row = [
+    document.getElementById('kodeTransfer').value,
+    document.getElementById('qtyTransfer').value,
+    document.getElementById('outletTransfer').value,
+    new Date().toLocaleString()
+  ];
+  await appendRow("Transfer", row);
+  formTransfer.reset();
+});
+
+// Laporan
+async function loadLaporan() {
+  const penerimaan = await fetchSheet("Penerimaan");
+  const transfer = await fetchSheet("Transfer");
+  const table = document.getElementById('tabelLaporan');
+  table.innerHTML = "<tr><th>Tipe</th><th>Kode</th><th>Qty</th><th>Outlet</th><th>Tanggal</th></tr>";
+  penerimaan.data.slice(1).forEach(r => {
+    table.innerHTML += `<tr><td>Penerimaan</td><td>${r[0]}</td><td>${r[1]}</td><td>-</td><td>${r[2]}</td></tr>`;
+  });
+  transfer.data.slice(1).forEach(r => {
+    table.innerHTML += `<tr><td>Transfer</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;
+  });
+}
+
+function exportCSV() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById('tabelLaporan'));
+  XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+  XLSX.writeFile(wb, "laporan.xlsx");
+}
+
+// Init
+loadMaster();
+loadOutlet();
+loadLaporan();
 </script>
-
 </body>
 </html>
